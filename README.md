@@ -6,13 +6,20 @@ This desktop application, built with Python, automates the generation of exam su
 ## Brief Explanation of the Genetic Algorithm (GA)
 The genetic algorithm is an optimization method inspired by natural evolution, used here to generate optimal supervision schedules. Here’s a concise summary:
 
-### Initialization: A population of schedules (chromosomes) is randomly created, each representing an assignment of teachers to slots.
-###  Evaluation: Each schedule is scored using a fitness function, which measures slot coverage, equity (balanced distribution), dispersion (spacing of slots), and compliance with constraints (unavailabilities, quotas).
-###  Selection: The best schedules (elite) are retained, and others are chosen to reproduce.
-###  Crossover: Two parent schedules exchange parts of their assignments to create a new offspring, combining their strengths.
-###  Mutation: Random changes (teacher swaps) introduce diversity.
-###  Iteration: This process repeats over multiple generations (e.g., 200), with repairs to enforce strict constraints.
-### Result: The best schedule, based on the highest fitness, is selected as the final solution.
+#### Initialization: 
+A population of schedules (chromosomes) is randomly created, each representing an assignment of teachers to slots.
+####  Evaluation: 
+Each schedule is scored using a fitness function, which measures slot coverage, equity (balanced distribution), dispersion (spacing of slots), and compliance with constraints (unavailabilities, quotas).
+####  Selection: 
+The best schedules (elite) are retained, and others are chosen to reproduce.
+####  Crossover:
+Two parent schedules exchange parts of their assignments to create a new offspring, combining their strengths.
+####  Mutation: 
+Random changes (teacher swaps) introduce diversity.
+####  Iteration: 
+This process repeats over multiple generations (e.g., 200), with repairs to enforce strict constraints.
+#### Result: 
+The best schedule, based on the highest fitness, is selected as the final solution.
 
 This approach efficiently explores a large solution space, though it does not guarantee a global optimum, making it suitable for meeting the project’s constraints.
 
