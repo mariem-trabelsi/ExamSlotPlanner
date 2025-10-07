@@ -13,7 +13,8 @@ This desktop application, built with Python, automates the generation of exam su
 To isolate dependencies, create and activate a virtual environment:
 ```bash
 python3 -m venv env_surveillance
-source env_surveillance/bin/activate```
+source env_surveillance/bin/activate
+```
 
 ### 2. Install Required Python Libraries
 ```bash
