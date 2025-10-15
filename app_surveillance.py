@@ -3,6 +3,7 @@ from tkinter import filedialog, messagebox, ttk
 import pandas as pd
 import random
 import numpy as np
+import customtkinter as ctk
 from datetime import datetime, timedelta
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
@@ -308,7 +309,7 @@ def run_ga_improved(slots, teachers, progress_callback=None):
     """
     slots_dict = {slot: data for slot, data in slots}
     pop_size = 100
-    generations = 500
+    generations = 200
     elite_size = 10
     
     pop = generate_population(pop_size, slots, teachers)
@@ -364,7 +365,7 @@ def run_ga_improved(slots, teachers, progress_callback=None):
         pop = new_pop
     
     return pop_with_fitness[0][0], best_fitness_history
-
+system_font = "Segoe UI"
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -698,7 +699,6 @@ class App(tk.Tk):
         self.tree.heading("Enseignants", text="Enseignants Assignés")
         self.tree.column("Créneau", width=150)
         self.tree.column("Enseignants", width=600)
-        
         for slot in sorted(self.best.keys()):
             teachers_assigned = [str(teacher) for teacher in self.best[slot]]
             self.tree.insert("", "end", values=(slot, ", ".join(teachers_assigned)))
@@ -817,40 +817,308 @@ class App(tk.Tk):
             slots_str = ", ".join(sorted(day_slots[day]))
             self.tree.insert("", "end", values=(day, len(day_slots[day]), slots_str))
 
+    # def show_by_room(self):
+    #     """Vue par salle avec les enseignants assignés"""
+    #     if not self.best:
+    #         messagebox.showerror("❌ Erreur", "Veuillez générer le planning d'abord!")
+    #         return
+        
+    #     self.tree.delete(*self.tree.get_children())
+    #     self.tree["columns"] = ("Créneau", "Salle", "Nb Profs", "Enseignants")
+    #     self.tree.heading("Créneau", text="Créneau")
+    #     self.tree.heading("Salle", text="Salle")
+    #     self.tree.heading("Nb Profs", text="Nb Profs")
+    #     self.tree.heading("Enseignants", text="Enseignants Assignés")
+        
+    #     self.tree.column("Créneau", width=150)
+    #     self.tree.column("Salle", width=100)
+    #     self.tree.column("Nb Profs", width=80)
+    #     self.tree.column("Enseignants", width=500)
+        
+    #     for slot in sorted(self.best.keys()):
+    #         for room, teachers in sorted(self.room_assignments[slot].items()):
+    #             nb_profs = len(teachers)
+    #             tag = "optimal" if nb_profs == 2 else "acceptable" if nb_profs <= 4 else "problem"
+                
+    #             self.tree.insert("", "end", values=(
+    #                 slot, 
+    #                 room, 
+    #                 f"{nb_profs} {'✓' if nb_profs == 2 else '⚠️' if nb_profs > 4 else ''}", 
+    #                 ", ".join(sorted(teachers))
+    #             ), tags=(tag,))
+        
+    #     self.tree.tag_configure("optimal", background="#ccffcc")
+    #     self.tree.tag_configure("acceptable", background="#ffffcc")
+    #     self.tree.tag_configure("problem", background="#ffcccc")
     def show_by_room(self):
-        """Vue par salle avec les enseignants assignés"""
         if not self.best:
             messagebox.showerror("❌ Erreur", "Veuillez générer le planning d'abord!")
             return
-        
-        self.tree.delete(*self.tree.get_children())
-        self.tree["columns"] = ("Créneau", "Salle", "Nb Profs", "Enseignants")
-        self.tree.heading("Créneau", text="Créneau")
-        self.tree.heading("Salle", text="Salle")
-        self.tree.heading("Nb Profs", text="Nb Profs")
-        self.tree.heading("Enseignants", text="Enseignants Assignés")
-        
-        self.tree.column("Créneau", width=150)
-        self.tree.column("Salle", width=100)
-        self.tree.column("Nb Profs", width=80)
-        self.tree.column("Enseignants", width=500)
-        
-        for slot in sorted(self.best.keys()):
-            for room, teachers in sorted(self.room_assignments[slot].items()):
-                nb_profs = len(teachers)
-                tag = "optimal" if nb_profs == 2 else "acceptable" if nb_profs <= 4 else "problem"
-                
-                self.tree.insert("", "end", values=(
-                    slot, 
-                    room, 
-                    f"{nb_profs} {'✓' if nb_profs == 2 else '⚠️' if nb_profs > 4 else ''}", 
-                    ", ".join(sorted(teachers))
-                ), tags=(tag,))
-        
-        self.tree.tag_configure("optimal", background="#ccffcc")
-        self.tree.tag_configure("acceptable", background="#ffffcc")
-        self.tree.tag_configure("problem", background="#ffcccc")
+    
+        self.clear_content()
+        self.page_title.configure(text="📍 Vue par Salle")
+    
+    # Control panel
+        control_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+        control_frame.pack(fill="x", pady=(0, 20))
+    
+    # Room filter dropdown
+        filter_left = ctk.CTkFrame(control_frame, fg_color="transparent")
+        filter_left.pack(side="left")
+    
+        ctk.CTkLabel(
+        filter_left,
+        text="Filtrer:",
+        font=ctk.CTkFont(family=system_font, size=13),
+        text_color="#37352f"
+        ).pack(side="left", padx=(0, 10))
+    
+    # Get unique rooms from data
+        all_rooms = set()
+        for slot_rooms in self.room_assignments.values():
+            all_rooms.update(slot_rooms.keys())
+        room_list = ["Toutes les salles"] + sorted(all_rooms)
+    
+        self.room_filter = ctk.CTkComboBox(
+        filter_left,
+        values=room_list,
+        width=200,
+        height=36,
+        font=ctk.CTkFont(family=system_font, size=13),
+        border_width=1,
+        border_color="#e3e2e0",
+        button_color="#2383e2",
+        button_hover_color="#1a6dc9",
+        dropdown_fg_color="#ffffff",
+        command=lambda _: self.refresh_room_calendar()
+        )
+        self.room_filter.pack(side="left")
+        self.room_filter.set("Toutes les salles")
+    
+        # Legend
+        legend_frame = ctk.CTkFrame(control_frame, fg_color="transparent")
+        legend_frame.pack(side="right")
+    
+        self.create_legend_item(legend_frame, "● Optimal (2 profs)", "#d3f8d3", 0)
+        self.create_legend_item(legend_frame, "● Acceptable (3-4)", "#fff4cc", 1)
+        self.create_legend_item(legend_frame, "● Problème (>4)", "#ffd4d4", 2)
+    
+    # Scrollable calendar container
+        self.calendar_container = ctk.CTkScrollableFrame(
+            self.content_frame,
+        fg_color="#ffffff",
+        corner_radius=12,
+        border_width=1,
+        border_color="#e3e2e0"
+    )
+        self.calendar_container.pack(fill="both", expand=True)
+    
+    # Create calendar grid
+        self.create_calendar_grid()
 
+    def create_legend_item(self, parent, text, color, index):
+        """Créer un élément de légende"""
+        item_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        item_frame.pack(side="left", padx=10)
+    
+        color_box = ctk.CTkFrame(
+        item_frame, 
+        width=16, 
+        height=16, 
+        corner_radius=4, 
+        fg_color=color, 
+        border_width=1, 
+        border_color="#e3e2e0"
+    )
+        color_box.pack(side="left", padx=(0, 6))
+        color_box.pack_propagate(False)
+    
+        ctk.CTkLabel(
+        item_frame,
+        text=text,
+        font=ctk.CTkFont(family=system_font, size=12),
+        text_color="#37352f"
+        ).pack(side="left")
+
+    def create_calendar_grid(self):
+        """Créer la grille du calendrier"""
+        # Group slots by day
+        days_schedule = {}
+        for slot in sorted(self.best.keys()):
+        # Extract day from slot (format: "Jour Session" or similar)
+            parts = slot.split()
+            day = parts[0] if parts else slot
+            session = parts[1] if len(parts) > 1 else "S1"
+        
+            if day not in days_schedule:
+                days_schedule[day] = {}
+            days_schedule[day][session] = slot
+    
+    # Calendar grid header
+        grid_frame = ctk.CTkFrame(self.calendar_container, fg_color="transparent")
+        grid_frame.pack(fill="both", expand=True, padx=20, pady=20)
+    
+    # Configure grid weights
+        grid_frame.grid_columnconfigure(0, weight=0, minsize=100)  # Time column
+        for i in range(1, len(days_schedule) + 1):
+            grid_frame.grid_columnconfigure(i, weight=1, minsize=250)
+    
+    # Header row - Days
+        ctk.CTkLabel(
+        grid_frame,
+        text="",
+        font=ctk.CTkFont(family=system_font, size=12, weight="bold"),
+        text_color="#37352f"
+    ).grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
+    
+        col_idx = 1
+        for day in sorted(days_schedule.keys()):
+            day_header = ctk.CTkFrame(
+            grid_frame,
+            corner_radius=8,
+            fg_color="#f7f6f3",
+            border_width=1,
+            border_color="#e3e2e0"
+        )
+            day_header.grid(row=0, column=col_idx, sticky="ew", padx=2, pady=2)
+        
+            ctk.CTkLabel(
+            day_header,
+            text=day,
+            font=ctk.CTkFont(family=system_font, size=14, weight="bold"),
+            text_color="#37352f"
+        ).pack(pady=12)
+        
+            col_idx += 1
+    
+    # Time slots and events
+        row_idx = 1
+        for session, time in sorted(SESSION_TIMES.items(), key=lambda x: x[1]):
+        # Time label
+            time_label = ctk.CTkFrame(
+            grid_frame,
+            corner_radius=8,
+            fg_color="#f7f6f3",
+            border_width=1,
+            border_color="#e3e2e0"
+            )
+            time_label.grid(row=row_idx, column=0, sticky="nsew", padx=2, pady=2)
+        
+            ctk.CTkLabel(
+            time_label,
+            text=f"{session}\n{time}",
+            font=ctk.CTkFont(family=system_font, size=12, weight="bold"),
+            text_color="#37352f"
+            ).pack(pady=15)
+        
+        # Event cells for each day
+            col_idx = 1
+            for day in sorted(days_schedule.keys()):
+                cell_frame = ctk.CTkFrame(
+                grid_frame,
+                corner_radius=8,
+                fg_color="#ffffff",
+                border_width=1,
+                border_color="#e3e2e0"
+            )
+                cell_frame.grid(row=row_idx, column=col_idx, sticky="nsew", padx=2, pady=2)
+            
+            # Check if this day has this session
+                if session in days_schedule[day]:
+                    slot = days_schedule[day][session]
+                    self.create_slot_events(cell_frame, slot)
+            
+                col_idx += 1
+        
+        # Set minimum row height
+            grid_frame.grid_rowconfigure(row_idx, minsize=150)
+            row_idx += 1
+
+    def create_slot_events(self, parent, slot):
+        """Créer les événements (salles) pour un créneau"""
+        selected_room = self.room_filter.get()
+        
+        if slot not in self.room_assignments:
+            return
+        
+        rooms_data = self.room_assignments[slot]
+        
+        # Filter by selected room if needed
+        if selected_room != "Toutes les salles":
+            if selected_room not in rooms_data:
+                return
+            rooms_data = {selected_room: rooms_data[selected_room]}
+        
+        event_container = ctk.CTkFrame(parent, fg_color="transparent")
+        event_container.pack(fill="both", expand=True, padx=8, pady=8)
+        
+        for room, teachers in sorted(rooms_data.items()):
+            nb_profs = len(teachers)
+            
+            # Determine color based on number of teachers
+            if nb_profs == 2:
+                bg_color = "#d3f8d3"
+                status = "✓"
+            elif nb_profs <= 4:
+                bg_color = "#fff4cc"
+                status = "⚠️"
+            else:
+                bg_color = "#ffd4d4"
+                status = "⚠️"
+            
+            # Event card
+            event_card = ctk.CTkFrame(
+                event_container,
+                corner_radius=6,
+                fg_color=bg_color,
+                border_width=1,
+                border_color="#e3e2e0"
+            )
+            event_card.pack(fill="x", pady=4)
+            
+            # Card content
+            card_content = ctk.CTkFrame(event_card, fg_color="transparent")
+            card_content.pack(fill="both", padx=10, pady=8)
+            
+            # Room name and status
+            header_frame = ctk.CTkFrame(card_content, fg_color="transparent")
+            header_frame.pack(fill="x", anchor="w")
+            
+            ctk.CTkLabel(
+                header_frame,
+                text=f"🚪 {room}",
+                font=ctk.CTkFont(family=system_font, size=13, weight="bold"),
+                text_color="#37352f",
+                anchor="w"
+            ).pack(side="left")
+            
+            ctk.CTkLabel(
+                header_frame,
+                text=f"{status} {nb_profs} prof{'s' if nb_profs > 1 else ''}",
+                font=ctk.CTkFont(family=system_font, size=11),
+                text_color="#787774",
+                anchor="e"
+            ).pack(side="right")
+            
+            # Teachers list
+            teachers_text = ", ".join(sorted(teachers))
+            if len(teachers_text) > 50:
+                teachers_text = teachers_text[:47] + "..."
+            
+            ctk.CTkLabel(
+                card_content,
+                text=teachers_text,
+                font=ctk.CTkFont(family=system_font, size=11),
+                text_color="#787774",
+                anchor="w",
+                wraplength=220
+            ).pack(fill="x", anchor="w", pady=(4, 0))
+
+    def refresh_room_calendar(self):
+        """Rafraîchir le calendrier quand le filtre change"""
+        for widget in self.calendar_container.winfo_children():
+            widget.destroy()
+        self.create_calendar_grid()
     def show_general_info(self):
         """Vue des informations générales"""
         if not self.best:
