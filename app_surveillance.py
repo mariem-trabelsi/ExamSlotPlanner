@@ -1156,461 +1156,570 @@ def run_ga_improved(slots, teachers, progress_callback=None):
 # if __name__ == "__main__":
 #     app = App()
 #     app.mainloop()
-# system_font = "Segoe UI"
+system_font = "Segoe UI"
 
-# class ModernApp(ctk.CTk):
-#     def __init__(self):
-#         super().__init__()
+class ModernApp(ctk.CTk):
+    def __init__(self):
+        super().__init__()
         
-#         # Configuration de la fenêtre
-#         self.title("Gestion des Créneaux de Surveillance")
-#         self.geometry("1400x900")
+        # Configuration de la fenêtre
+        self.title("Gestion des Créneaux de Surveillance")
+        self.geometry("1400x900")
         
-#         # Thème moderne
-#         ctk.set_appearance_mode("light")
-#         ctk.set_default_color_theme("blue")
+        # Thème moderne
+        ctk.set_appearance_mode("light")
+        ctk.set_default_color_theme("blue")
+        # Modern color palette
+        self.colors = {
+            'primary': '#2563EB',
+            'primary_hover': '#1D4ED8',
+            'success': '#10B981',
+            'warning': '#F59E0B',
+            'error': '#EF4444',
+            'bg': '#FAFAFA',
+            'card': '#FFFFFF',
+            'sidebar': '#F8FAFC',
+            'text': '#1F2937',
+            'text_secondary': '#6B7280',
+            'border': '#E5E7EB',
+            'hover': '#F3F4F6'
+        }
+        # Variables
+        self.slots_loaded = False
+        self.teachers_loaded = False
+        self.wishes_loaded = False
+        self.current_view = "welcome"
         
-#         # Variables
-#         self.slots_loaded = False
-#         self.teachers_loaded = False
-#         self.wishes_loaded = False
-#         self.current_view = "welcome"
+        # Layout principal avec sidebar
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=1)
         
-#         # Layout principal avec sidebar
-#         self.grid_columnconfigure(1, weight=1)
-#         self.grid_rowconfigure(0, weight=1)
+        # Créer les sections
+        self.create_sidebar()
+        self.create_main_content()
+        self.quota_window = None
+        self.quota_entries = {}
+
+    def create_sidebar(self):
+        """Sidebar à gauche avec navigation"""
+        self.sidebar = ctk.CTkFrame(self, width=280, corner_radius=0, fg_color="#fbfbfa")
+        self.sidebar.grid(row=0, column=0, sticky="nsew", padx=0, pady=0)
+        self.sidebar.grid_rowconfigure(10, weight=1)
+        self.sidebar.grid_propagate(False)
         
-#         # Créer les sections
-#         self.create_sidebar()
-#         self.create_main_content()
+        # Logo/Titre
+        title_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
+        title_frame.grid(row=0, column=0, padx=20, pady=(30, 20), sticky="ew")
         
-#     def create_sidebar(self):
-#         """Sidebar à gauche avec navigation"""
-#         self.sidebar = ctk.CTkFrame(self, width=280, corner_radius=0, fg_color="#fbfbfa")
-#         self.sidebar.grid(row=0, column=0, sticky="nsew", padx=0, pady=0)
-#         self.sidebar.grid_rowconfigure(10, weight=1)
-#         self.sidebar.grid_propagate(False)
+        ctk.CTkLabel(
+            title_frame,
+            text="📋 Surveillance",
+            font=ctk.CTkFont(family=system_font, size=24, weight="bold"),
+            text_color="#37352f"
+        ).pack(anchor="w")
         
-#         # Logo/Titre
-#         title_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
-#         title_frame.grid(row=0, column=0, padx=20, pady=(30, 20), sticky="ew")
+        ctk.CTkLabel(
+            title_frame,
+            text="Gestion des créneaux",
+            font=ctk.CTkFont(family=system_font, size=12),
+            text_color="#9b9a97"
+        ).pack(anchor="w")
         
-#         ctk.CTkLabel(
-#             title_frame,
-#             text="📋 Surveillance",
-#             font=ctk.CTkFont(family=system_font, size=24, weight="bold"),
-#             text_color="#37352f"
-#         ).pack(anchor="w")
+        # Section Import
+        ctk.CTkLabel(
+            self.sidebar,
+            text="DONNÉES",
+            font=ctk.CTkFont(family=system_font, size=10, weight="bold"),
+            text_color="#9b9a97",
+            anchor="w"
+        ).grid(row=1, column=0, padx=20, pady=(20, 10), sticky="w")
         
-#         ctk.CTkLabel(
-#             title_frame,
-#             text="Gestion des créneaux",
-#             font=ctk.CTkFont(family=system_font, size=12),
-#             text_color="#9b9a97"
-#         ).pack(anchor="w")
+        self.btn_load_slots = self.create_sidebar_button(
+            "📅 Créneaux", 2, self.load_slots
+        )
+        self.btn_load_teachers = self.create_sidebar_button(
+            "👥 Enseignants", 3, self.load_teachers
+        )
+        self.btn_load_wishes = self.create_sidebar_button(
+            "⭐ Vœux", 4, self.load_wishes
+        )
         
-#         # Section Import
-#         ctk.CTkLabel(
-#             self.sidebar,
-#             text="DONNÉES",
-#             font=ctk.CTkFont(family=system_font, size=10, weight="bold"),
-#             text_color="#9b9a97",
-#             anchor="w"
-#         ).grid(row=1, column=0, padx=20, pady=(20, 10), sticky="w")
+        # Section Configuration
+        ctk.CTkLabel(
+            self.sidebar,
+            text="CONFIGURATION",
+            font=ctk.CTkFont(family=system_font, size=10, weight="bold"),
+            text_color="#9b9a97",
+            anchor="w"
+        ).grid(row=5, column=0, padx=20, pady=(20, 10), sticky="w")
         
-#         self.btn_load_slots = self.create_sidebar_button(
-#             "📅 Créneaux", 2, self.load_slots
-#         )
-#         self.btn_load_teachers = self.create_sidebar_button(
-#             "👥 Enseignants", 3, self.load_teachers
-#         )
-#         self.btn_load_wishes = self.create_sidebar_button(
-#             "⭐ Vœux", 4, self.load_wishes
-#         )
+        self.create_sidebar_button("⚙️ Quotas", 6, self.configure_quotas)
         
-#         # Section Configuration
-#         ctk.CTkLabel(
-#             self.sidebar,
-#             text="CONFIGURATION",
-#             font=ctk.CTkFont(family=system_font, size=10, weight="bold"),
-#             text_color="#9b9a97",
-#             anchor="w"
-#         ).grid(row=5, column=0, padx=20, pady=(20, 10), sticky="w")
+        # Section Actions
+        ctk.CTkLabel(
+            self.sidebar,
+            text="ACTIONS",
+            font=ctk.CTkFont(family=system_font, size=10, weight="bold"),
+            text_color="#9b9a97",
+            anchor="w"
+        ).grid(row=7, column=0, padx=20, pady=(20, 10), sticky="w")
         
-#         self.create_sidebar_button("⚙️ Quotas", 6, self.configure_quotas)
-        
-#         # Section Actions
-#         ctk.CTkLabel(
-#             self.sidebar,
-#             text="ACTIONS",
-#             font=ctk.CTkFont(family=system_font, size=10, weight="bold"),
-#             text_color="#9b9a97",
-#             anchor="w"
-#         ).grid(row=7, column=0, padx=20, pady=(20, 10), sticky="w")
-        
-#         self.btn_generate = ctk.CTkButton(
-#             self.sidebar,
-#             text="▶️ Générer Planning",
-#             command=self.generate_planning,
-#             height=40,
-#             font=ctk.CTkFont(family=system_font, size=13, weight="bold"),
-#             fg_color="#2383e2",
-#             hover_color="#1a6dc9",
-#             corner_radius=8
-#         )
-#         self.btn_generate.grid(row=8, column=0, padx=20, pady=10, sticky="ew")
-        
-#     def create_sidebar_button(self, text, row, command):
-#         """Créer un bouton de sidebar avec indicateur de statut"""
-#         btn_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
-#         btn_frame.grid(row=row, column=0, padx=20, pady=5, sticky="ew")
-#         btn_frame.grid_columnconfigure(0, weight=1)
-        
-#         btn = ctk.CTkButton(
-#             btn_frame,
-#             text=text,
-#             command=command,
-#             height=36,
-#             anchor="w",
-#             font=ctk.CTkFont(family=system_font, size=13),
-#             fg_color="transparent",
-#             text_color="#37352f",
-#             hover_color="#ededec",
-#             corner_radius=6
-#         )
-#         btn.grid(row=0, column=0, sticky="ew")
-        
-#         # Indicateur de statut (petit cercle)
-#         status_indicator = ctk.CTkLabel(
-#             btn_frame,
-#             text="○",
-#             font=ctk.CTkFont(family=system_font, size=16),
-#             text_color="#d3d3d3",
-#             width=20
-#         )
-#         status_indicator.grid(row=0, column=1, padx=(5, 0))
-        
-#         # Stocker la référence pour pouvoir la modifier plus tard
-#         if "Créneaux" in text:
-#             self.slots_indicator = status_indicator
-#         elif "Enseignants" in text:
-#             self.teachers_indicator = status_indicator
-#         elif "Vœux" in text:
-#             self.wishes_indicator = status_indicator
-        
-#         return btn
-        
-#     def create_main_content(self):
-#         """Zone principale de contenu"""
-#         self.main_frame = ctk.CTkFrame(self, corner_radius=0, fg_color="#ffffff")
-#         self.main_frame.grid(row=0, column=1, sticky="nsew", padx=0, pady=0)
-#         self.main_frame.grid_columnconfigure(0, weight=1)
-#         self.main_frame.grid_rowconfigure(1, weight=1)
-        
-#         # Header avec actions
-#         self.create_header()
-        
-#         # Content area
-#         self.content_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-#         self.content_frame.grid(row=1, column=0, sticky="nsew", padx=30, pady=20)
-#         self.content_frame.grid_columnconfigure(0, weight=1)
-#         self.content_frame.grid_rowconfigure(0, weight=1)
-        
-#         # Afficher l'écran de bienvenue
-#         self.show_welcome_screen()
-        
-#     def create_header(self):
-#         """Header avec titre et actions"""
-#         header = ctk.CTkFrame(self.main_frame, height=80, corner_radius=0, fg_color="transparent")
-#         header.grid(row=0, column=0, sticky="ew", padx=30, pady=(20, 0))
-#         header.grid_columnconfigure(1, weight=1)
-        
-#         # Titre de la page
-#         self.page_title = ctk.CTkLabel(
-#             header,
-#             text="Bienvenue",
-#             font=ctk.CTkFont(family=system_font, size=32, weight="bold"),
-#             text_color="#37352f",
-#             anchor="w"
-#         )
-#         self.page_title.grid(row=0, column=0, sticky="w")
-        
-#         # Actions rapides
-#         actions_frame = ctk.CTkFrame(header, fg_color="transparent")
-#         actions_frame.grid(row=0, column=2, sticky="e")
-        
-#         ctk.CTkButton(
-#             actions_frame,
-#             text="📊 Qualité",
-#             command=self.show_planning_quality,
-#             width=100,
-#             height=36,
-#             fg_color="#ffffff",
-#             text_color="#37352f",
-#             hover_color="#ededec",
-#             corner_radius=6,
-#             border_width=1,
-#             border_color="#e3e2e0"
-#         ).pack(side="left", padx=5)
-        
-#         ctk.CTkButton(
-#             actions_frame,
-#             text="💾 Exporter",
-#             command=self.show_export_menu,
-#             width=100,
-#             height=36,
-#             fg_color="#ffffff",
-#             text_color="#37352f",
-#             hover_color="#ededec",
-#             corner_radius=6,
-#             border_width=1,
-#             border_color="#e3e2e0"
-#         ).pack(side="left", padx=5)
-        
-#     def show_welcome_screen(self):
-#         """Écran d'accueil avec instructions"""
-#         self.clear_content()
-#         self.page_title.configure(text="Bienvenue")
-        
-#         # Card de bienvenue
-#         welcome_card = ctk.CTkFrame(self.content_frame, corner_radius=12, fg_color="#f7f6f3")
-#         welcome_card.pack(fill="both", expand=True, pady=20)
-        
-#         content = ctk.CTkFrame(welcome_card, fg_color="transparent")
-#         content.pack(padx=60, pady=60, fill="both", expand=True)
-        
-#         # Icône et titre
-#         ctk.CTkLabel(
-#             content,
-#             text="🚀",
-#             font=ctk.CTkFont(family=system_font, size=64)
-#         ).pack(pady=(0, 20))
-        
-#         ctk.CTkLabel(
-#             content,
-#             text="Commencez par charger vos données",
-#             font=ctk.CTkFont(family=system_font, size=24, weight="bold"),
-#             text_color="#37352f"
-#         ).pack(pady=(0, 10))
-        
-#         ctk.CTkLabel(
-#             content,
-#             text="Suivez ces étapes pour générer votre planning de surveillance",
-#             font=ctk.CTkFont(family=system_font, size=14),
-#             text_color="#787774"
-#         ).pack(pady=(0, 40))
-        
-#         # Steps
-#         steps_data = [
-#             ("1", "📅 Charger les créneaux", "Importez le fichier Excel contenant les créneaux de surveillance"),
-#             ("2", "👥 Charger les enseignants", "Importez la liste des enseignants disponibles"),
-#             ("3", "⭐ Charger les vœux", "Importez les préférences de chaque enseignant"),
-#             ("4", "⚙️ Configurer les quotas", "Définissez les règles d'attribution"),
-#             ("5", "▶️ Générer", "Lancez la génération automatique du planning")
-#         ]
-        
-#         for num, title, desc in steps_data:
-#             self.create_step_card(content, num, title, desc)
-        
-#     def create_step_card(self, parent, num, title, desc):
-#         """Créer une carte d'étape"""
-#         card = ctk.CTkFrame(parent, corner_radius=8, fg_color="#ffffff", height=70, border_width=1, border_color="#e3e2e0")
-#         card.pack(fill="x", pady=8)
-#         card.pack_propagate(False)
-        
-#         inner = ctk.CTkFrame(card, fg_color="transparent")
-#         inner.pack(fill="both", padx=20, pady=15)
-        
-#         # Numéro
-#         num_label = ctk.CTkLabel(
-#             inner,
-#             text=num,
-#             font=ctk.CTkFont(family=system_font, size=18, weight="bold"),
-#             text_color="#2383e2",
-#             width=30
-#         )
-#         num_label.pack(side="left", padx=(0, 15))
-        
-#         # Texte
-#         text_frame = ctk.CTkFrame(inner, fg_color="transparent")
-#         text_frame.pack(side="left", fill="both", expand=True)
-        
-#         ctk.CTkLabel(
-#             text_frame,
-#             text=title,
-#             font=ctk.CTkFont(family=system_font, size=14, weight="bold"),
-#             text_color="#37352f",
-#             anchor="w"
-#         ).pack(anchor="w")
-        
-#         ctk.CTkLabel(
-#             text_frame,
-#             text=desc,
-#             font=ctk.CTkFont(family=system_font, size=12),
-#             text_color="#787774",
-#             anchor="w"
-#         ).pack(anchor="w")
-        
-#     def show_data_view(self, view_type):
-#         """Afficher les données dans un tableau moderne"""
-#         self.clear_content()
-        
-#         titles = {
-#             "teacher": "Vue par Enseignant",
-#             "day": "Vue par Jour",
-#             "room": "Vue par Salle"
-#         }
-#         self.page_title.configure(text=titles.get(view_type, "Données"))
-        
-#         # Barre de recherche et filtres
-#         search_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
-#         search_frame.pack(fill="x", pady=(0, 20))
-        
-#         self.search_entry = ctk.CTkEntry(
-#             search_frame,
-#             placeholder_text="🔍 Rechercher...",
-#             height=40,
-#             corner_radius=8,
-#             font=ctk.CTkFont(family=system_font, size=13),
-#             border_width=1,
-#             border_color="#e3e2e0"
-#         )
-#         self.search_entry.pack(side="left", fill="x", expand=True, padx=(0, 10))
-        
-#         filter_btn = ctk.CTkButton(
-#             search_frame,
-#             text="Filtrer",
-#             width=100,
-#             height=40,
-#             fg_color="#ffffff",
-#             text_color="#37352f",
-#             hover_color="#ededec",
-#             corner_radius=8,
-#             border_width=1,
-#             border_color="#e3e2e0"
-#         )
-#         filter_btn.pack(side="left")
-        
-#         # Tableau de données
-#         table_frame = ctk.CTkFrame(self.content_frame, corner_radius=12, fg_color="#ffffff", border_width=1, border_color="#e3e2e0")
-#         table_frame.pack(fill="both", expand=True)
-        
-#         # Style pour le treeview
-#         style = ttk.Style()
-#         style.theme_use("clam")
-#         style.configure("Custom.Treeview",
-#                        background="#ffffff",
-#                        foreground="#37352f",
-#                        rowheight=40,
-#                        fieldbackground="#ffffff",
-#                        borderwidth=0,
-#                        font=(system_font, 11))
-#         style.configure("Custom.Treeview.Heading",
-#                        background="#f7f6f3",
-#                        foreground="#37352f",
-#                        relief="flat",
-#                        font=(system_font, 11, 'bold'))
-#         style.map('Custom.Treeview',
-#                  background=[('selected', '#e3e2df')],
-#                  foreground=[('selected', '#37352f')])
-        
-#         # Scrollbar
-#         scroll = ctk.CTkScrollbar(table_frame)
-#         scroll.pack(side="right", fill="y", padx=(0, 5), pady=5)
-        
-#         # Treeview
-#         self.tree = ttk.Treeview(
-#             table_frame,
-#             style="Custom.Treeview",
-#             columns=("Col1", "Col2", "Col3", "Col4"),
-#             show="headings",
-#             yscrollcommand=scroll.set
-#         )
-#         self.tree.pack(fill="both", expand=True, padx=5, pady=5)
-#         scroll.configure(command=self.tree.yview)
-        
-#         # Exemple de colonnes
-#         self.tree.heading("Col1", text="Enseignant")
-#         self.tree.heading("Col2", text="Jour")
-#         self.tree.heading("Col3", text="Heure")
-#         self.tree.heading("Col4", text="Salle")
-        
-#         for i in range(1, 5):
-#             self.tree.column(f"Col{i}", width=200)
-        
-#         # Données d'exemple
-#         for i in range(20):
-#             self.tree.insert("", "end", values=(
-#                 f"Enseignant {i+1}",
-#                 f"Lundi",
-#                 f"08:00 - 10:00",
-#                 f"Salle {i+1}"
-#             ))
-        
-#     def clear_content(self):
-#         """Effacer le contenu actuel"""
-#         for widget in self.content_frame.winfo_children():
-#             widget.destroy()
+        self.btn_generate = ctk.CTkButton(
+            self.sidebar,
+            text="▶️ Générer Planning",
+            command=self.generate_planning,
+            height=40,
+            font=ctk.CTkFont(family=system_font, size=13, weight="bold"),
+            fg_color="#2383e2",
+            hover_color="#1a6dc9",
+            corner_radius=8
+        )
+        self.btn_generate.grid(row=8, column=0, padx=20, pady=10, sticky="ew")
+    def adjust_color(self, hex_color, adjustment):
+        """Darken or lighten a color"""
+        hex_color = hex_color.lstrip('#')
+        r, g, b = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+        r = max(0, min(255, r + adjustment))
+        g = max(0, min(255, g + adjustment))
+        b = max(0, min(255, b + adjustment))
+        return f'#{r:02x}{g:02x}{b:02x}'
     
-#     def update_status_indicator(self, indicator, loaded):
-#         """Mettre à jour l'indicateur de statut"""
-#         if loaded:
-#             indicator.configure(text="●", text_color="#2383e2")
-#         else:
-#             indicator.configure(text="○", text_color="#d3d3d3")
+    def create_sidebar_button(self, text, row, command):
+        """Créer un bouton de sidebar avec indicateur de statut"""
+        btn_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
+        btn_frame.grid(row=row, column=0, padx=20, pady=5, sticky="ew")
+        btn_frame.grid_columnconfigure(0, weight=1)
+        
+        btn = ctk.CTkButton(
+            btn_frame,
+            text=text,
+            command=command,
+            height=36,
+            anchor="w",
+            font=ctk.CTkFont(family=system_font, size=13),
+            fg_color="transparent",
+            text_color="#37352f",
+            hover_color="#ededec",
+            corner_radius=6
+        )
+        btn.grid(row=0, column=0, sticky="ew")
+        
+        # Indicateur de statut (petit cercle)
+        status_indicator = ctk.CTkLabel(
+            btn_frame,
+            text="○",
+            font=ctk.CTkFont(family=system_font, size=16),
+            text_color="#d3d3d3",
+            width=20
+        )
+        status_indicator.grid(row=0, column=1, padx=(5, 0))
+        
+        # Stocker la référence pour pouvoir la modifier plus tard
+        if "Créneaux" in text:
+            self.slots_indicator = status_indicator
+        elif "Enseignants" in text:
+            self.teachers_indicator = status_indicator
+        elif "Vœux" in text:
+            self.wishes_indicator = status_indicator
+        
+        return btn
+        
+    def create_main_content(self):
+        """Zone principale de contenu"""
+        self.main_frame = ctk.CTkFrame(self, corner_radius=0, fg_color="#ffffff")
+        self.main_frame.grid(row=0, column=1, sticky="nsew", padx=0, pady=0)
+        self.main_frame.grid_columnconfigure(0, weight=1)
+        self.main_frame.grid_rowconfigure(1, weight=1)
+        
+        # Header avec actions
+        self.create_header()
+        
+        # Content area
+        self.content_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        self.content_frame.grid(row=1, column=0, sticky="nsew", padx=30, pady=20)
+        self.content_frame.grid_columnconfigure(0, weight=1)
+        self.content_frame.grid_rowconfigure(0, weight=1)
+        
+        # Afficher l'écran de bienvenue
+        self.show_welcome_screen()
+        
+    def create_header(self):
+        """Header avec titre et actions"""
+        header = ctk.CTkFrame(self.main_frame, height=80, corner_radius=0, fg_color="transparent")
+        header.grid(row=0, column=0, sticky="ew", padx=30, pady=(20, 0))
+        header.grid_columnconfigure(1, weight=1)
+        
+        # Titre de la page
+        self.page_title = ctk.CTkLabel(
+            header,
+            text="Bienvenue",
+            font=ctk.CTkFont(family=system_font, size=32, weight="bold"),
+            text_color="#37352f",
+            anchor="w"
+        )
+        self.page_title.grid(row=0, column=0, sticky="w")
+        
+        # Actions rapides
+        actions_frame = ctk.CTkFrame(header, fg_color="transparent")
+        actions_frame.grid(row=0, column=2, sticky="e")
+        
+        ctk.CTkButton(
+            actions_frame,
+            text="📊 Qualité",
+            command=self.show_planning_quality,
+            width=100,
+            height=36,
+            fg_color="#ffffff",
+            text_color="#37352f",
+            hover_color="#ededec",
+            corner_radius=6,
+            border_width=1,
+            border_color="#e3e2e0"
+        ).pack(side="left", padx=5)
+        
+        ctk.CTkButton(
+            actions_frame,
+            text="💾 Exporter",
+            command=self.show_export_menu,
+            width=100,
+            height=36,
+            fg_color="#ffffff",
+            text_color="#37352f",
+            hover_color="#ededec",
+            corner_radius=6,
+            border_width=1,
+            border_color="#e3e2e0"
+        ).pack(side="left", padx=5)
+        
+    def show_welcome_screen(self):
+        """Écran d'accueil avec instructions"""
+        self.clear_content()
+        self.page_title.configure(text="Bienvenue")
+        
+        # Card de bienvenue
+        welcome_card = ctk.CTkFrame(self.content_frame, corner_radius=12, fg_color="#f7f6f3")
+        welcome_card.pack(fill="both", expand=True, pady=20)
+        
+        content = ctk.CTkFrame(welcome_card, fg_color="transparent")
+        content.pack(padx=60, pady=60, fill="both", expand=True)
+        
+        # Icône et titre
+        ctk.CTkLabel(
+            content,
+            text="🚀",
+            font=ctk.CTkFont(family=system_font, size=64)
+        ).pack(pady=(0, 20))
+        
+        ctk.CTkLabel(
+            content,
+            text="Commencez par charger vos données",
+            font=ctk.CTkFont(family=system_font, size=24, weight="bold"),
+            text_color="#37352f"
+        ).pack(pady=(0, 10))
+        
+        ctk.CTkLabel(
+            content,
+            text="Suivez ces étapes pour générer votre planning de surveillance",
+            font=ctk.CTkFont(family=system_font, size=14),
+            text_color="#787774"
+        ).pack(pady=(0, 40))
+        
+        # Steps
+        steps_data = [
+            ("1", "📅 Charger les créneaux", "Importez le fichier Excel contenant les créneaux de surveillance"),
+            ("2", "👥 Charger les enseignants", "Importez la liste des enseignants disponibles"),
+            ("3", "⭐ Charger les vœux", "Importez les préférences de chaque enseignant"),
+            ("4", "⚙️ Configurer les quotas", "Définissez les règles d'attribution"),
+            ("5", "▶️ Générer", "Lancez la génération automatique du planning")
+        ]
+        
+        for num, title, desc in steps_data:
+            self.create_step_card(content, num, title, desc)
+        
+    def create_step_card(self, parent, num, title, desc):
+        """Créer une carte d'étape"""
+        card = ctk.CTkFrame(parent, corner_radius=8, fg_color="#ffffff", height=70, border_width=1, border_color="#e3e2e0")
+        card.pack(fill="x", pady=8)
+        card.pack_propagate(False)
+        
+        inner = ctk.CTkFrame(card, fg_color="transparent")
+        inner.pack(fill="both", padx=20, pady=15)
+        
+        # Numéro
+        num_label = ctk.CTkLabel(
+            inner,
+            text=num,
+            font=ctk.CTkFont(family=system_font, size=18, weight="bold"),
+            text_color="#2383e2",
+            width=30
+        )
+        num_label.pack(side="left", padx=(0, 15))
+        
+        # Texte
+        text_frame = ctk.CTkFrame(inner, fg_color="transparent")
+        text_frame.pack(side="left", fill="both", expand=True)
+        
+        ctk.CTkLabel(
+            text_frame,
+            text=title,
+            font=ctk.CTkFont(family=system_font, size=14, weight="bold"),
+            text_color="#37352f",
+            anchor="w"
+        ).pack(anchor="w")
+        
+        ctk.CTkLabel(
+            text_frame,
+            text=desc,
+            font=ctk.CTkFont(family=system_font, size=12),
+            text_color="#787774",
+            anchor="w"
+        ).pack(anchor="w")
+        
+    def show_data_view(self, view_type):
+        """Afficher les données dans un tableau moderne"""
+        self.clear_content()
+        
+        titles = {
+            "teacher": "Vue par Enseignant",
+            "day": "Vue par Jour",
+            "room": "Vue par Salle"
+        }
+        self.page_title.configure(text=titles.get(view_type, "Données"))
+        
+        # Barre de recherche et filtres
+        search_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+        search_frame.pack(fill="x", pady=(0, 20))
+        
+        self.search_entry = ctk.CTkEntry(
+            search_frame,
+            placeholder_text="🔍 Rechercher...",
+            height=40,
+            corner_radius=8,
+            font=ctk.CTkFont(family=system_font, size=13),
+            border_width=1,
+            border_color="#e3e2e0"
+        )
+        self.search_entry.pack(side="left", fill="x", expand=True, padx=(0, 10))
+        
+        filter_btn = ctk.CTkButton(
+            search_frame,
+            text="Filtrer",
+            width=100,
+            height=40,
+            fg_color="#ffffff",
+            text_color="#37352f",
+            hover_color="#ededec",
+            corner_radius=8,
+            border_width=1,
+            border_color="#e3e2e0"
+        )
+        filter_btn.pack(side="left")
+        
+        # Tableau de données
+        table_frame = ctk.CTkFrame(self.content_frame, corner_radius=12, fg_color="#ffffff", border_width=1, border_color="#e3e2e0")
+        table_frame.pack(fill="both", expand=True)
+        
+        # Style pour le treeview
+        style = ttk.Style()
+        style.theme_use("clam")
+        style.configure("Custom.Treeview",
+                       background="#ffffff",
+                       foreground="#37352f",
+                       rowheight=40,
+                       fieldbackground="#ffffff",
+                       borderwidth=0,
+                       font=(system_font, 11))
+        style.configure("Custom.Treeview.Heading",
+                       background="#f7f6f3",
+                       foreground="#37352f",
+                       relief="flat",
+                       font=(system_font, 11, 'bold'))
+        style.map('Custom.Treeview',
+                 background=[('selected', '#e3e2df')],
+                 foreground=[('selected', '#37352f')])
+        
+        # Scrollbar
+        scroll = ctk.CTkScrollbar(table_frame)
+        scroll.pack(side="right", fill="y", padx=(0, 5), pady=5)
+        
+        # Treeview
+        self.tree = ttk.Treeview(
+            table_frame,
+            style="Custom.Treeview",
+            columns=("Col1", "Col2", "Col3", "Col4"),
+            show="headings",
+            yscrollcommand=scroll.set
+        )
+        self.tree.pack(fill="both", expand=True, padx=5, pady=5)
+        scroll.configure(command=self.tree.yview)
+        
+        # Exemple de colonnes
+        self.tree.heading("Col1", text="Enseignant")
+        self.tree.heading("Col2", text="Jour")
+        self.tree.heading("Col3", text="Heure")
+        self.tree.heading("Col4", text="Salle")
+        
+        for i in range(1, 5):
+            self.tree.column(f"Col{i}", width=200)
+        
+        # Données d'exemple
+        for i in range(20):
+            self.tree.insert("", "end", values=(
+                f"Enseignant {i+1}",
+                f"Lundi",
+                f"08:00 - 10:00",
+                f"Salle {i+1}"
+            ))
+        
+    def clear_content(self):
+        """Effacer le contenu actuel"""
+        for widget in self.content_frame.winfo_children():
+            widget.destroy()
     
-#     # Méthodes de callback
-#     def load_slots(self):
-#         file = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx *.xls")])
-#         if file:
-#             self.slots_loaded = True
-#             self.update_status_indicator(self.slots_indicator, True)
+    def update_status_indicator(self, indicator, loaded):
+        """Mettre à jour l'indicateur de statut"""
+        if loaded:
+            indicator.configure(text="●", text_color="#2383e2")
+        else:
+            indicator.configure(text="○", text_color="#d3d3d3")
+    
+    # Méthodes de callback
+    def load_slots(self):
+        file = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx *.xls")])
+        if file:
+            self.slots_loaded = True
+            self.update_status_indicator(self.slots_indicator, True)
             
-#     def load_teachers(self):
-#         file = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx *.xls")])
-#         if file:
-#             self.teachers_loaded = True
-#             self.update_status_indicator(self.teachers_indicator, True)
+    def load_teachers(self):
+        file = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx *.xls")])
+        if file:
+            self.teachers_loaded = True
+            self.update_status_indicator(self.teachers_indicator, True)
             
-#     def load_wishes(self):
-#         file = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx *.xls")])
-#         if file:
-#             self.wishes_loaded = True
-#             self.update_status_indicator(self.wishes_indicator, True)
+    def load_wishes(self):
+        file = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx *.xls")])
+        if file:
+            self.wishes_loaded = True
+            self.update_status_indicator(self.wishes_indicator, True)
+                   
+    def configure_quotas(self):
+        """Ouvre la fenêtre de configuration des quotas"""
+        if self.quota_window and self.quota_window.winfo_exists():
+            self.quota_window.lift()
+            return
+        
+        self.quota_window = ctk.CTkToplevel(self)
+        self.quota_window.title("⚙️ Configuration des Quotas")
+        self.quota_window.geometry("450x550")
+        self.quota_window.configure(fg_color=self.colors['bg'])
+        
+        # Header
+        header = ctk.CTkFrame(self.quota_window, fg_color=self.colors['card'],
+                             corner_radius=12, height=80)
+        header.pack(fill='x', padx=20, pady=20)
+        header.pack_propagate(False)
+        
+        ctk.CTkLabel(header, 
+                    text="Configuration des Quotas par Grade",
+                    font=("Segoe UI", 18, "bold"),
+                    text_color=self.colors['text']).pack(pady=25)
+        
+        # Scrollable frame for quotas
+        scroll_frame = ctk.CTkScrollableFrame(self.quota_window, 
+                                             fg_color=self.colors['card'],
+                                             corner_radius=12)
+        scroll_frame.pack(fill='both', expand=True, padx=20, pady=(0, 20))
+        
+        for grade in sorted(GRADE_QUOTAS.keys()):
+            quota_card = ctk.CTkFrame(scroll_frame, fg_color=self.colors['hover'],
+                                     corner_radius=10)
+            quota_card.pack(fill='x', pady=5, padx=10)
             
-#     def configure_quotas(self):
-#         messagebox.showinfo("Configuration", "Fenêtre de configuration des quotas")
+            ctk.CTkLabel(quota_card, text=f"{grade}:", 
+                        font=("Segoe UI", 13, "bold"),
+                        text_color=self.colors['text'],
+                        width=80, anchor='w').pack(side='left', padx=15, pady=12)
+            
+            entry = ctk.CTkEntry(quota_card, width=100, height=35,
+                                corner_radius=8,
+                                border_width=1,
+                                border_color=self.colors['border'])
+            entry.insert(0, str(GRADE_QUOTAS[grade]))
+            entry.pack(side='right', padx=15, pady=12)
+            self.quota_entries[grade] = entry
         
-#     def generate_planning(self):
-#         if not all([self.slots_loaded, self.teachers_loaded, self.wishes_loaded]):
-#             messagebox.showwarning("Attention", "Veuillez charger toutes les données d'abord!")
-#             return
-#         messagebox.showinfo("Génération", "Génération du planning en cours...")
-#         self.show_data_view("teacher")
+        # Buttons
+        button_frame = ctk.CTkFrame(self.quota_window, fg_color='transparent')
+        button_frame.pack(fill='x', padx=20, pady=(0, 20))
         
-#     def show_planning_quality(self):
-#         messagebox.showinfo("Qualité", "Analyse de la qualité du planning")
+        ctk.CTkButton(button_frame, text="💾 Sauvegarder",
+                     font=("Segoe UI", 13, "bold"),
+                     fg_color=self.colors['success'],
+                     hover_color=self.adjust_color(self.colors['success'], -20),
+                     height=45,
+                     corner_radius=10,
+                     command=self.save_quotas).pack(side='left', fill='x', expand=True, padx=(0, 10))
         
-#     def show_export_menu(self):
-#         menu = tk.Menu(self, tearoff=0)
-#         menu.add_command(label="📄 Exporter CSV", command=self.export_csv)
-#         menu.add_command(label="📑 Exporter PDF", command=self.export_pdf)
-#         menu.add_command(label="📊 Exporter Excel", command=self.export_excel)
-#         menu.post(self.winfo_pointerx(), self.winfo_pointery())
-        
-#     def export_csv(self):
-#         messagebox.showinfo("Export", "Export CSV")
-        
-#     def export_pdf(self):
-#         messagebox.showinfo("Export", "Export PDF")
-        
-#     def export_excel(self):
-#         messagebox.showinfo("Export", "Export Excel")
+        ctk.CTkButton(button_frame, text="❌ Annuler",
+                     font=("Segoe UI", 13),
+                     fg_color=self.colors['hover'],
+                     hover_color=self.colors['border'],
+                     text_color=self.colors['text'],
+                     height=45,
+                     corner_radius=10,
+                     command=self.quota_window.destroy).pack(side='left', fill='x', expand=True)
 
+    def save_quotas(self):
+        """Sauvegarde les quotas configurés"""
+        try:
+            for grade, entry in self.quota_entries.items():
+                quota = int(entry.get())
+                if quota < 0:
+                    raise ValueError(f"Quota négatif pour {grade}")
+                GRADE_QUOTAS[grade] = quota
+            
+            for teacher in self.teachers:
+                self.teachers[teacher]['quota'] = GRADE_QUOTAS.get(self.teachers[teacher]['grade'], 2)
+            
+            self.show_success_message("✅ Succès", "Quotas mis à jour avec succès!")
+            if self.quota_window:
+                self.quota_window.destroy()
+        except ValueError as e:
+            self.show_error_message("❌ Erreur", 
+                f"Valeur invalide: {str(e)}\nLes quotas doivent être des nombres positifs.")
 
-# if __name__ == "__main__":
-#     app = ModernApp()
-#     app.mainloop()
+    def generate_planning(self):
+        if not all([self.slots_loaded, self.teachers_loaded, self.wishes_loaded]):
+            messagebox.showwarning("Attention", "Veuillez charger toutes les données d'abord!")
+            return
+        messagebox.showinfo("Génération", "Génération du planning en cours...")
+        self.show_data_view("teacher")
+        
+    def show_planning_quality(self):
+        messagebox.showinfo("Qualité", "Analyse de la qualité du planning")
+        
+    def show_export_menu(self):
+        menu = tk.Menu(self, tearoff=0)
+        menu.add_command(label="📄 Exporter CSV", command=self.export_csv)
+        menu.add_command(label="📑 Exporter PDF", command=self.export_pdf)
+        menu.add_command(label="📊 Exporter Excel", command=self.export_excel)
+        menu.post(self.winfo_pointerx(), self.winfo_pointery())
+        
+    def export_csv(self):
+        messagebox.showinfo("Export", "Export CSV")
+        
+    def export_pdf(self):
+        messagebox.showinfo("Export", "Export PDF")
+        
+    def export_excel(self):
+        messagebox.showinfo("Export", "Export Excel")
+
+import os
+print("Current working directory:", os.getcwd())
+print("Files in current directory:", os.listdir())
+if __name__ == "__main__":
+    app = ModernApp()
+    app.mainloop()
 
 class ModernApp(ctk.CTk):
     def __init__(self):
@@ -1649,7 +1758,14 @@ class ModernApp(ctk.CTk):
         self.room_assignments = {}
         self.quota_window = None
         self.quota_entries = {}
-        
+        self.data_loaded = {
+        'slots': False,
+        'teachers': False,
+        'wishes': False
+        }
+    
+    # Store button references for updating
+        self.data_buttons = {}
         self.create_modern_ui()
         
     def create_modern_ui(self):
@@ -1671,8 +1787,8 @@ class ModernApp(ctk.CTk):
         self.main_content = ctk.CTkFrame(content, fg_color='transparent')
         self.main_content.pack(side='left', fill='both', expand=True, padx=(20, 0))
         
-        # Action cards
-        self.create_action_cards()
+        # # Action cards
+        # self.create_action_cards()
         
         # Data view area
         self.create_data_view()
@@ -1691,8 +1807,12 @@ class ModernApp(ctk.CTk):
                            width=56, height=56, corner_radius=14)
         logo.pack(side='left')
         logo.pack_propagate(False)
-        
-        logo_text = ctk.CTkLabel(logo, text="📅", font=("Segoe UI Emoji", 28))
+        logo_image = ctk.CTkImage(
+            light_image=Image.open("ExamSlotPlanner/logoisi.png"), 
+            dark_image=Image.open("ExamSlotPlanner/logoisi.png"),  
+            size=(60, 60)                      
+            )
+        logo_text = ctk.CTkLabel(logo, image=logo_image, text="")
         logo_text.place(relx=0.5, rely=0.5, anchor='center')
         
         title_container = ctk.CTkFrame(logo_container, fg_color='transparent')
@@ -1715,19 +1835,19 @@ class ModernApp(ctk.CTk):
         sidebar.pack_propagate(False)
         
         # Section: Chargement des données
-        self.create_section(sidebar, "📁 Chargement des Données", 30)
+        self.create_section(sidebar, "📁 Chargement des fichiers", 30)
         
         self.create_modern_button(
             sidebar, "Charger Créneaux", "📊", 
-            self.load_slots, self.colors['primary']
+            self.load_slots, self.colors['primary'], data_key='slots'
         )
         self.create_modern_button(
             sidebar, "Charger Enseignants", "👥",
-            self.load_teachers, self.colors['primary']
+            self.load_teachers, self.colors['primary'], data_key='teachers'
         )
         self.create_modern_button(
             sidebar, "Charger Vœux", "💭",
-            self.load_wishes, self.colors['primary']
+            self.load_wishes, self.colors['primary'], data_key='wishes'
         )
         self.create_modern_button(
             sidebar, "Configurer Quotas", "⚙️",
@@ -1746,43 +1866,46 @@ class ModernApp(ctk.CTk):
             sidebar, "Générer Planning", "▶️",
             self.generate_planning, self.colors['success'], large=True
         )
-        
+        self.create_modern_button(
+            sidebar, "Voir Historique", "▶️",
+            self.generate_planning, self.colors['success'], large=True
+        )
         # Divider
         ctk.CTkFrame(sidebar, height=1, fg_color=self.colors['border']).pack(
             fill='x', padx=20, pady=20
         )
         
         # Section: Export
-        self.create_section(sidebar, "💾 Export", 0)
+        # self.create_section(sidebar, "💾 Export", 0)
         
-        export_frame = ctk.CTkFrame(sidebar, fg_color='transparent')
-        export_frame.pack(fill='x', padx=20, pady=(0, 10))
+        # export_frame = ctk.CTkFrame(sidebar, fg_color='transparent')
+        # export_frame.pack(fill='x', padx=20, pady=(0, 10))
         
-        ctk.CTkButton(
-            export_frame,
-            text="CSV",
-            font=("Segoe UI", 13, "bold"),
-            fg_color=self.colors['hover'],
-            hover_color=self.colors['border'],
-            text_color=self.colors['text'],
-            width=135,
-            height=40,
-            corner_radius=10,
-            command=self.export_csv
-        ).pack(side='left', padx=(0, 10))
+        # ctk.CTkButton(
+        #     export_frame,
+        #     text="CSV",
+        #     font=("Segoe UI", 13, "bold"),
+        #     fg_color=self.colors['hover'],
+        #     hover_color=self.colors['border'],
+        #     text_color=self.colors['text'],
+        #     width=135,
+        #     height=40,
+        #     corner_radius=10,
+        #     command=self.export_csv
+        # ).pack(side='left', padx=(0, 10))
         
-        ctk.CTkButton(
-            export_frame,
-            text="PDF",
-            font=("Segoe UI", 13, "bold"),
-            fg_color=self.colors['hover'],
-            hover_color=self.colors['border'],
-            text_color=self.colors['text'],
-            width=135,
-            height=40,
-            corner_radius=10,
-            command=self.export_pdf
-        ).pack(side='left')
+        # ctk.CTkButton(
+        #     export_frame,
+        #     text="PDF",
+        #     font=("Segoe UI", 13, "bold"),
+        #     fg_color=self.colors['hover'],
+        #     hover_color=self.colors['border'],
+        #     text_color=self.colors['text'],
+        #     width=135,
+        #     height=40,
+        #     corner_radius=10,
+        #     command=self.export_pdf
+        # ).pack(side='left')
         
     def create_section(self, parent, title, top_padding):
         ctk.CTkLabel(
@@ -1793,23 +1916,41 @@ class ModernApp(ctk.CTk):
             anchor='w'
         ).pack(fill='x', padx=20, pady=(top_padding, 15))
         
-    def create_modern_button(self, parent, text, icon, command, color, large=False):
+    def create_modern_button(self, parent, text, icon, command, color, large=False, data_key=None):
         height = 52 if large else 44
         font_size = 15 if large else 13
         
+        # Add status indicator if this is a data loading button
+        status_icon = ""
+        if data_key:
+            status_icon = " ✅" if self.data_loaded.get(data_key, False) else " ⚠️"
+        
         btn = ctk.CTkButton(
             parent,
-            text=f"{icon}  {text}",
+            text=f"{icon}  {text}{status_icon}",  # Changed: status at the end
             font=("Segoe UI", font_size, "bold" if large else "normal"),
             fg_color=color,
             hover_color=self.adjust_color(color, -20),
             text_color='white',
             height=height,
             corner_radius=10,
-            command=command
+            command=command,
+            anchor='w'  # ADD THIS LINE - aligns text to left
         )
         btn.pack(fill='x', padx=20, pady=(0, 10))
+        # Store button reference if it's a data button
+        if data_key:
+            self.data_buttons[data_key] = btn
         
+        return btn
+    
+    def update_button_status(self, data_key, text, icon):
+        """Update button appearance when data is loaded"""
+        if data_key in self.data_buttons:
+            btn = self.data_buttons[data_key]
+            status_icon = " ✅" if self.data_loaded[data_key] else " ⚠️"  # Changed: space before icon
+            btn.configure(text=f"{icon}  {text}{status_icon}")  # Changed: status at the end
+    
     def adjust_color(self, hex_color, adjustment):
         """Darken or lighten a color"""
         hex_color = hex_color.lstrip('#')
@@ -1819,83 +1960,83 @@ class ModernApp(ctk.CTk):
         b = max(0, min(255, b + adjustment))
         return f'#{r:02x}{g:02x}{b:02x}'
         
-    def create_action_cards(self):
-        cards_frame = ctk.CTkFrame(self.main_content, fg_color='transparent', height=120)
-        cards_frame.pack(fill='x', pady=(0, 20))
-        cards_frame.pack_propagate(False)
+    # def create_action_cards(self):
+    #     cards_frame = ctk.CTkFrame(self.main_content, fg_color='transparent', height=120)
+    #     cards_frame.pack(fill='x', pady=(0, 20))
+    #     cards_frame.pack_propagate(False)
         
-        # Visualization cards
-        views = [
-            ("👤 Par Enseignant", self.show_by_teacher, self.colors['primary']),
-            ("📅 Par Jour", self.show_by_day, self.colors['success']),
-            ("🏢 Par Salle", self.show_by_room, self.colors['warning']),
-        ]
+    #     # Visualization cards
+    #     views = [
+    #         ("👤 Par Enseignant", self.show_by_teacher, self.colors['primary']),
+    #         ("📅 Par Jour", self.show_by_day, self.colors['success']),
+    #         ("🏢 Par Salle", self.show_by_room, self.colors['warning']),
+    #     ]
         
-        for i, (text, command, color) in enumerate(views):
-            card = ctk.CTkFrame(cards_frame, fg_color=self.colors['card'],
-                               corner_radius=12)
-            card.pack(side='left', fill='both', expand=True, 
-                     padx=(0 if i == 0 else 10, 0))
+    #     for i, (text, command, color) in enumerate(views):
+    #         card = ctk.CTkFrame(cards_frame, fg_color=self.colors['card'],
+    #                            corner_radius=12)
+    #         card.pack(side='left', fill='both', expand=True, 
+    #                  padx=(0 if i == 0 else 10, 0))
             
-            icon_frame = ctk.CTkFrame(card, fg_color=color,
-                                     width=48, height=48, corner_radius=12)
-            icon_frame.pack(pady=(20, 10))
-            icon_frame.pack_propagate(False)
+    #         icon_frame = ctk.CTkFrame(card, fg_color=color,
+    #                                  width=48, height=48, corner_radius=12)
+    #         icon_frame.pack(pady=(20, 10))
+    #         icon_frame.pack_propagate(False)
             
-            ctk.CTkLabel(icon_frame, text=text.split()[0],
-                        font=("Segoe UI Emoji", 20)).place(relx=0.5, rely=0.5, anchor='center')
+    #         ctk.CTkLabel(icon_frame, text=text.split()[0],
+    #                     font=("Segoe UI Emoji", 20)).place(relx=0.5, rely=0.5, anchor='center')
             
-            ctk.CTkLabel(card, text=" ".join(text.split()[1:]),
-                        font=("Segoe UI", 13, "bold"),
-                        text_color=self.colors['text']).pack()
+    #         ctk.CTkLabel(card, text=" ".join(text.split()[1:]),
+    #                     font=("Segoe UI", 13, "bold"),
+    #                     text_color=self.colors['text']).pack()
             
-            ctk.CTkButton(
-                card,
-                text="Afficher",
-                font=("Segoe UI", 12),
-                fg_color='transparent',
-                hover_color=self.colors['hover'],
-                text_color=color,
-                height=32,
-                corner_radius=8,
-                command=command
-            ).pack(pady=(10, 20))
+    #         ctk.CTkButton(
+    #             card,
+    #             text="Afficher",
+    #             font=("Segoe UI", 12),
+    #             fg_color='transparent',
+    #             hover_color=self.colors['hover'],
+    #             text_color=color,
+    #             height=32,
+    #             corner_radius=8,
+    #             command=command
+    #         ).pack(pady=(10, 20))
             
-        # Info cards
-        info_cards = [
-            ("📊 Qualité", self.show_planning_quality, self.colors['error']),
-            ("ℹ️ Infos", self.show_general_info, self.colors['text_secondary']),
-        ]
+    #     # Info cards
+    #     info_cards = [
+    #         ("📊 Qualité", self.show_planning_quality, self.colors['error']),
+    #         ("ℹ️ Infos", self.show_general_info, self.colors['text_secondary']),
+    #     ]
         
-        for text, command, color in info_cards:
-            card = ctk.CTkFrame(cards_frame, fg_color=self.colors['card'],
-                               corner_radius=12, width=150)
-            card.pack(side='left', fill='y', padx=(10, 0))
-            card.pack_propagate(False)
+    #     for text, command, color in info_cards:
+    #         card = ctk.CTkFrame(cards_frame, fg_color=self.colors['card'],
+    #                            corner_radius=12, width=150)
+    #         card.pack(side='left', fill='y', padx=(10, 0))
+    #         card.pack_propagate(False)
             
-            icon_frame = ctk.CTkFrame(card, fg_color=color,
-                                     width=40, height=40, corner_radius=10)
-            icon_frame.pack(pady=(20, 8))
-            icon_frame.pack_propagate(False)
+    #         icon_frame = ctk.CTkFrame(card, fg_color=color,
+    #                                  width=40, height=40, corner_radius=10)
+    #         icon_frame.pack(pady=(20, 8))
+    #         icon_frame.pack_propagate(False)
             
-            ctk.CTkLabel(icon_frame, text=text.split()[0],
-                        font=("Segoe UI Emoji", 18)).place(relx=0.5, rely=0.5, anchor='center')
+    #         ctk.CTkLabel(icon_frame, text=text.split()[0],
+    #                     font=("Segoe UI Emoji", 18)).place(relx=0.5, rely=0.5, anchor='center')
             
-            ctk.CTkLabel(card, text=" ".join(text.split()[1:]),
-                        font=("Segoe UI", 12, "bold"),
-                        text_color=self.colors['text']).pack()
+    #         ctk.CTkLabel(card, text=" ".join(text.split()[1:]),
+    #                     font=("Segoe UI", 12, "bold"),
+    #                     text_color=self.colors['text']).pack()
             
-            ctk.CTkButton(
-                card,
-                text="Voir",
-                font=("Segoe UI", 11),
-                fg_color='transparent',
-                hover_color=self.colors['hover'],
-                text_color=color,
-                height=28,
-                corner_radius=6,
-                command=command
-            ).pack(pady=(8, 15))
+    #         ctk.CTkButton(
+    #             card,
+    #             text="Voir",
+    #             font=("Segoe UI", 11),
+    #             fg_color='transparent',
+    #             hover_color=self.colors['hover'],
+    #             text_color=color,
+    #             height=28,
+    #             corner_radius=6,
+    #             command=command
+    #         ).pack(pady=(8, 15))
             
     def create_data_view(self):
         view_frame = ctk.CTkFrame(self.main_content, fg_color=self.colors['card'],
@@ -2072,7 +2213,8 @@ class ModernApp(ctk.CTk):
                 
                 unique_dates = sorted(df['dateExam'].unique())
                 self.day_to_date = {str(i+1): d.strftime('%Y-%m-%d') for i, d in enumerate(unique_dates)}
-                
+                self.data_loaded['slots'] = True
+                self.update_button_status('slots', "Charger Créneaux", "📊")
                 self.show_success_message("✅ Succès", f"{len(self.slots)} créneaux chargés avec succès!")
             except Exception as e:
                 self.show_error_message("❌ Erreur", f"Erreur lors du chargement des créneaux:\n{str(e)}")
@@ -2099,6 +2241,8 @@ class ModernApp(ctk.CTk):
                     }
                 
                 participating = sum(1 for t in self.teachers.values() if t['participe_surveillance'])
+                self.data_loaded['teachers'] = True
+                self.update_button_status('teachers', "Charger Enseignants", "👥")
                 self.show_success_message("✅ Succès", 
                     f"{len(self.teachers)} enseignants chargés\n({participating} participent à la surveillance)")
             except Exception as e:
@@ -2133,7 +2277,8 @@ class ModernApp(ctk.CTk):
                 
                 affected_teachers = len(set(str(int(row['code_smartex_ens'])) for _, row in df.iterrows() 
                                            if pd.notna(row['code_smartex_ens']) and str(int(row['code_smartex_ens'])) in self.teachers))
-                
+                self.data_loaded['wishes'] = True
+                self.update_button_status('wishes', "Charger Vœux", "💭")
                 self.show_success_message("✅ Succès", 
                     f"Vœux chargés: {loaded_count} indisponibilités\npour {affected_teachers} enseignants")
             except Exception as e:
