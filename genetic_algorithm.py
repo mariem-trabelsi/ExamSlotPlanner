@@ -1,22 +1,14 @@
 """
 Module contenant l'algorithme génétique pour l'optimisation du planning
+VERSION CORRIGÉE - Sans parallelisme pour éviter les segmentation faults
 """
 import random
 import numpy as np
 from datetime import datetime
-import multiprocessing as mp
-from functools import partial
 
 SESSION_ORDER = {"S1": 1, "S2": 2, "S3": 3, "S4": 4}
 SESSION_TIMES = {"S1": "08:30", "S2": "10:30", "S3": "12:30", "S4": "14:30"}
 
-def parse_datetime(slot_str):
-    """Parse un slot au format 'YYYY-MM-DD SESSION'"""
-    try:
-        date_part, session = slot_str.split()
-        return datetime.strptime(date_part, '%Y-%m-%d'), SESSION_ORDER.get(session, 0)
-    except:
-        return None, 0
 
 def is_valid_teacher(t):
     """Vérifie si un enseignant est valide (pas NaN)"""
@@ -24,6 +16,7 @@ def is_valid_teacher(t):
         return False
     t_str = str(t).strip()
     return t_str and t_str.lower() != 'nan'
+
 
 def get_teacher_slots(assignment, teacher):
     """Récupère les créneaux assignés à un enseignant avec tri"""
@@ -35,6 +28,10 @@ def get_teacher_slots(assignment, teacher):
                 date, order = parsed
                 slots.append((date, order, slot))
     return sorted(slots)
+
+
+
+
 
 def check_gap_violations(assignment, teachers, slots_dict):
     """Vérifie les séances creuses dans la même journée"""
@@ -58,31 +55,20 @@ def check_gap_violations(assignment, teachers, slots_dict):
         for date_key, sessions in days.items():
             if len(sessions) < 2:
                 continue
-            sessions = sorted(set(sessions))  # Supprimer doublons
+            sessions = sorted(set(sessions))
             
             for i in range(len(sessions) - 1):
                 gap = sessions[i + 1] - sessions[i]
-                if gap == 2:  # Une séance creuse
+                if gap == 2:
                     violations['one_gap'] += 1
-                elif gap == 3:  # Deux séances creuses
+                elif gap == 3:
                     violations['two_gaps'] += 1
     
     return violations
 
-def count_surveillance_days(teacher_slots):
-    """Compte le nombre de jours distincts de surveillance"""
-    if not teacher_slots:
-        return 0
-    days = set(date.strftime('%Y-%m-%d') for date, _, _ in teacher_slots)
-    return len(days)
 
 def dispersion_penalty(teacher_slots):
-    """
-    Pénalise les mauvaises répartitions:
-    - Bonus pour séances consécutives
-    - Pénalité pour séances creuses
-    - Pénalité pour trop de jours de surveillance
-    """
+    """Pénalise les mauvaises répartitions"""
     if len(teacher_slots) < 2:
         return 0
     
@@ -96,12 +82,12 @@ def dispersion_penalty(teacher_slots):
             days[date_key] = []
         days[date_key].append(order)
     
-    # Pénaliser le nombre de jours (moins de jours = mieux)
+    # Pénaliser le nombre de jours
     num_days = len(days)
     if num_days > 3:
         penalty -= 30 * (num_days - 3)
     
-    # Pénaliser les gaps dans chaque jour
+    # Pénaliser les gaps
     for date_key, sessions in days.items():
         if len(sessions) < 2:
             continue
@@ -109,14 +95,15 @@ def dispersion_penalty(teacher_slots):
         
         for i in range(len(sessions) - 1):
             gap = sessions[i + 1] - sessions[i]
-            if gap == 1:  # Consécutif - BIEN
+            if gap == 1:
                 penalty += 20
-            elif gap == 2:  # Une séance creuse - MAUVAIS
+            elif gap == 2:
                 penalty -= 50
-            elif gap == 3:  # Deux séances creuses - TRÈS MAUVAIS
+            elif gap == 3:
                 penalty -= 100
     
     return penalty
+
 
 def calculate_grade_equity(counts, teachers):
     """Calcule la variance des charges par grade"""
@@ -134,11 +121,9 @@ def calculate_grade_equity(counts, teachers):
     
     return total_variance
 
+
 def calculate_quota_violations(counts, teachers):
-    """
-    Calcule correctement les dépassements de quota
-    Returns: (total_violations, violation_count)
-    """
+    """Calcule les dépassements de quota"""
     total_excess = 0
     violation_count = 0
     
@@ -155,11 +140,9 @@ def calculate_quota_violations(counts, teachers):
     
     return total_excess, violation_count
 
+
 def check_responsable_presence(assignment, slots_dict, teachers):
-    """
-    Vérifie la présence des profs responsables
-    Un prof responsable est présent s'il surveille le même jour ET la même séance
-    """
+    """Vérifie la présence des profs responsables"""
     present = 0
     absent = 0
     
@@ -169,7 +152,6 @@ def check_responsable_presence(assignment, slots_dict, teachers):
         if not prof_resp or not is_valid_teacher(prof_resp):
             continue
         
-        # Vérifier si le prof responsable est dans ce créneau exact
         valid_teachers = [t for t in assignment.get(slot, []) if is_valid_teacher(t)]
         
         if prof_resp in valid_teachers:
@@ -179,10 +161,9 @@ def check_responsable_presence(assignment, slots_dict, teachers):
     
     return present, absent
 
+
 def fitness(assignment, teachers, slots_dict):
-    """
-    Fonction de fitness améliorée avec calculs corrects
-    """
+    """Fonction de fitness"""
     score = 0.0
     counts = {}
     
@@ -195,7 +176,7 @@ def fitness(assignment, teachers, slots_dict):
         min_needed = 2 * room_count
         max_needed = 4 * room_count
         
-        # Contraintes sur le nombre de profs par créneau
+        # Contraintes sur le nombre de profs
         if len(unique_assigned) < min_needed:
             score -= 500 * (min_needed - len(unique_assigned)) ** 2
         elif len(unique_assigned) > max_needed:
@@ -216,16 +197,15 @@ def fitness(assignment, teachers, slots_dict):
                 wish_priority = teachers[e].get('wish_priority', {}).get(slot, 1.0)
                 score -= 2000 * wish_priority
     
-    # Vérifier les dépassements de quota (CORRIGÉ)
+    # Vérifier dépassements de quota
     total_excess, violation_count = calculate_quota_violations(counts, teachers)
-    score -= 500 * (total_excess ** 2)  # Pénalité quadratique sur le total
+    score -= 500 * (total_excess ** 2)
     
-    # Vérifier présence des profs responsables (CORRIGÉ)
+    # Vérifier présence des profs responsables
     present, absent = check_responsable_presence(assignment, slots_dict, teachers)
-    score += 200 * present  # Bonus pour chaque présence
-    score -= 100 * absent   # Pénalité pour chaque absence
+    score += 200 * present
+    score -= 100 * absent
     
-    # Bonus si tous les responsables sont présents
     if absent == 0 and present > 0:
         score += 500
     
@@ -237,7 +217,7 @@ def fitness(assignment, teachers, slots_dict):
     if gap_violations['one_gap'] == 0 and gap_violations['two_gaps'] == 0:
         score += 500
     
-    # Calculer dispersion pour chaque enseignant
+    # Dispersion pour chaque enseignant
     for teacher_code in teachers:
         if not teachers[teacher_code].get('participe_surveillance', False):
             continue
@@ -249,6 +229,7 @@ def fitness(assignment, teachers, slots_dict):
     score -= 50 * total_variance
     
     return score
+
 
 def generate_population(pop_size, slots, teachers):
     """Génère une population initiale"""
@@ -295,6 +276,7 @@ def generate_population(pop_size, slots, teachers):
     
     return population
 
+
 def crossover(parent1, parent2):
     """Croisement uniforme"""
     child = {}
@@ -305,8 +287,9 @@ def crossover(parent1, parent2):
             child[key] = parent2[key][:]
     return child
 
+
 def mutate_improved(assignment, teachers, slots, slots_dict):
-    """Mutation améliorée avec plusieurs stratégies"""
+    """Mutation améliorée"""
     mutation_type = random.choice(['swap', 'reassign', 'redistribute', 'remove_overload'])
     teacher_list = [t for t in teachers 
                    if teachers[t].get('participe_surveillance', False) and is_valid_teacher(t)]
@@ -371,13 +354,14 @@ def mutate_improved(assignment, teachers, slots, slots_dict):
     
     return assignment
 
+
 def repair_solution(child, teachers, slots_dict):
-    """Répare une solution pour respecter les contraintes"""
+    """Répare une solution"""
     teacher_list = [t for t in teachers 
                    if teachers[t].get('participe_surveillance', False) and is_valid_teacher(t)]
     
     for slot in child:
-        # Nettoyer la liste
+        # Nettoyer
         child[slot] = [t for t in child[slot] if is_valid_teacher(t) and t in teacher_list]
         
         slot_data = slots_dict.get(slot, {})
@@ -387,10 +371,10 @@ def repair_solution(child, teachers, slots_dict):
         # Supprimer doublons
         child[slot] = list(dict.fromkeys(child[slot]))
         
-        # Compter les assignations actuelles
+        # Compter
         current_counts = {e: sum(1 for s in child if e in child[s]) for e in teacher_list}
         
-        # Compléter si nécessaire
+        # Compléter
         attempts = 0
         while len(child[slot]) < min_needed and attempts < 100:
             available = sorted([e for e in teacher_list
@@ -406,20 +390,21 @@ def repair_solution(child, teachers, slots_dict):
                 break
             attempts += 1
         
-        # Tronquer si nécessaire
+        # Tronquer
         if len(child[slot]) > max_needed:
             child[slot] = child[slot][:max_needed]
     
     return child
 
-def evaluate_individual_wrapper(args):
-    """Wrapper pour évaluation parallèle sécurisée"""
+
+def parse_datetime(slot_str):
+    """Parse un slot au format 'YYYY-MM-DD SESSION' (e.g., '2025-05-13 S2')."""
     try:
-        ind, teachers, slots_dict = args
-        return ind, fitness(ind, teachers, slots_dict)
-    except Exception as e:
-        print(f"Error in fitness evaluation: {e}")
-        return ind, -999999
+        date_part, session = slot_str.split()
+        date = datetime.strptime(date_part, '%Y-%m-%d')
+        return date, SESSION_ORDER.get(session, 0)
+    except (ValueError, AttributeError):
+        return None, 0
 
 def run_ga_optimized(slots, teachers, progress_callback=None):
     """
@@ -428,118 +413,74 @@ def run_ga_optimized(slots, teachers, progress_callback=None):
     EARLY_STOP_THRESHOLD = -50
     STAGNATION_LIMIT = 100
     MIN_IMPROVEMENT = 1.0
-    
     slots_dict = {slot: data for slot, data in slots}
-    pop_size = 200  # Réduit pour stabilité
-    max_generations = 2000
+    pop_size = 200
+    max_generations =10
     elite_size = int(pop_size * 0.2)
-    
     pop = generate_population(pop_size, slots, teachers)
     best_fitness_history = []
     stagnation_counter = 0
     last_significant_improvement_gen = 0
     mutation_rate = 0.25
-    
-    # Utiliser un pool avec gestion d'erreur
-    pool = None
-    try:
-        pool = mp.Pool(min(mp.cpu_count(), 4))  # Limiter le nombre de processus
-    except:
-        print("Multiprocessing non disponible, utilisation du mode séquentiel")
-    
     for gen in range(max_generations):
         try:
-            # Évaluation parallèle ou séquentielle
-            if pool:
-                args_list = [(ind, teachers, slots_dict) for ind in pop]
-                pop_with_fitness = pool.map(evaluate_individual_wrapper, args_list)
-            else:
-                pop_with_fitness = [evaluate_individual_wrapper((ind, teachers, slots_dict)) 
-                                   for ind in pop]
-            
+            # Évaluation séquentielle pour éviter problèmes de mémoire
+            pop_with_fitness = []
+            for ind in pop:
+                try:
+                    fitness_score = fitness(ind, teachers, slots_dict)
+                    pop_with_fitness.append((ind, fitness_score))
+                except Exception as e:
+                    print(f"Erreur dans l'évaluation de fitness: {e}")
+                    pop_with_fitness.append((ind, -999999))
             pop_with_fitness.sort(key=lambda x: x[1], reverse=True)
             best_fitness = pop_with_fitness[0][1]
             best_fitness_history.append(best_fitness)
-            
-            # Critères d'arrêt
             if best_fitness > EARLY_STOP_THRESHOLD:
                 if progress_callback:
                     progress_callback(gen, max_generations, best_fitness,
-                                    "🎯 Solution optimale trouvée!", "optimal")
-                if pool:
-                    pool.close()
-                    pool.join()
+                                     "🎯 Solution optimale trouvée!", "optimal")
                 return pop_with_fitness[0][0], best_fitness_history, "optimal"
-            
-            # Vérifier amélioration
             if gen > 0:
                 improvement = best_fitness - best_fitness_history[-2]
                 if improvement >= MIN_IMPROVEMENT:
                     last_significant_improvement_gen = gen
                     stagnation_counter = 0
-                    mutation_rate *= 0.8
-                    mutation_rate = max(mutation_rate, 0.1)
+                    mutation_rate = max(mutation_rate * 0.8, 0.1)
                 else:
                     stagnation_counter += 1
-            
-            # Stagnation
             if gen - last_significant_improvement_gen > STAGNATION_LIMIT:
                 if progress_callback:
                     progress_callback(gen, max_generations, best_fitness,
-                                    "✅ Convergence atteinte", "stagnated")
-                if pool:
-                    pool.close()
-                    pool.join()
+                                     "✅ Convergence atteinte", "stagnated")
                 return pop_with_fitness[0][0], best_fitness_history, "stagnated"
-            
-            # Ajuster taux de mutation
             if stagnation_counter < 20:
                 mutation_rate = 0.25
             elif stagnation_counter < 50:
                 mutation_rate = 0.5
             else:
                 mutation_rate = 0.8
-            
-            # Callback de progression
             if progress_callback:
                 fitness_values = [f for _, f in pop_with_fitness]
                 diversity = np.std(fitness_values) if len(fitness_values) > 1 else 0
                 status = f"Stag: {stagnation_counter} | Div: {diversity:.1f} | Mut: {mutation_rate:.2f}"
                 progress_callback(gen, max_generations, best_fitness, status, "running")
-            
-            # Nouvelle génération
             new_pop = [ind for ind, _ in pop_with_fitness[:elite_size]]
-            
             while len(new_pop) < pop_size:
                 tournament_size = 10
-                tournament1 = random.sample(pop_with_fitness[:pop_size//2], 
-                                          min(tournament_size, len(pop_with_fitness)//2))
+                tournament1 = random.sample(pop_with_fitness[:pop_size//2],
+                                           min(tournament_size, len(pop_with_fitness)//2))
                 p1 = max(tournament1, key=lambda x: x[1])[0]
-                
-                tournament2 = random.sample(pop_with_fitness[:pop_size//2], 
-                                          min(tournament_size, len(pop_with_fitness)//2))
+                tournament2 = random.sample(pop_with_fitness[:pop_size//2],
+                                           min(tournament_size, len(pop_with_fitness)//2))
                 p2 = max(tournament2, key=lambda x: x[1])[0]
-                
                 child = crossover(p1, p2)
-                
                 if random.random() < mutation_rate:
                     child = mutate_improved(child, teachers, slots, slots_dict)
-                
                 child = repair_solution(child, teachers, slots_dict)
                 new_pop.append(child)
-            
             pop = new_pop
-            
-        except KeyboardInterrupt:
-            print("\nInterruption utilisateur")
-            break
         except Exception as e:
             print(f"Erreur génération {gen}: {e}")
             continue
-    
-    # Nettoyage
-    if pool:
-        pool.close()
-        pool.join()
-    
     return pop_with_fitness[0][0], best_fitness_history, "max_gen"

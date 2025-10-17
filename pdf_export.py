@@ -13,6 +13,7 @@ from genetic_algorithm import (
     is_valid_teacher, fitness, check_gap_violations, 
     check_responsable_presence, calculate_quota_violations, SESSION_TIMES
 )
+from view_methods import check_prof_responsable_presence_simple
 
 def export_calendar_pdf(filename, app):
     """Exporte la vue calendrier en PDF"""
@@ -197,7 +198,10 @@ def export_quality_pdf(filename, app):
     total_excess, quota_violations_count = calculate_quota_violations(counts, app.teachers)
     
     # Profs responsables (CORRIGÉ)
-    prof_resp_present, prof_resp_absent = check_responsable_presence(app.best, slots_dict, app.teachers)
+    prof_resp_results = check_prof_responsable_presence_simple(app)
+    prof_resp_present = sum(r['present'] for r in prof_resp_results)
+    prof_resp_absent = len(prof_resp_results) - prof_resp_present
+    total_resp = len(prof_resp_results)
     
     # Séances creuses
     gap_violations = check_gap_violations(app.best, app.teachers, slots_dict)
@@ -209,7 +213,6 @@ def export_quality_pdf(filename, app):
     data.append(["Séances avec 1 creux (S1→S3, S2→S4)", str(gap_violations['one_gap'])])
     data.append(["Séances avec 2 creux (S1→S4)", str(gap_violations['two_gaps'])])
     
-    total_resp = prof_resp_present + prof_resp_absent
     if total_resp > 0:
         taux = (prof_resp_present / total_resp) * 100
         data.append(["Profs responsables présents", 
