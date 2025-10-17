@@ -409,12 +409,12 @@ def run_ga_optimized(slots, teachers, progress_callback=None):
     """
     Algorithme génétique optimisé avec gestion sécurisée du multiprocessing
     """
-    EARLY_STOP_THRESHOLD = -50
+    EARLY_STOP_THRESHOLD = 3000
     STAGNATION_LIMIT = 100
     MIN_IMPROVEMENT = 1.0
     slots_dict = {slot: data for slot, data in slots}
     pop_size = 200
-    max_generations =10
+    max_generations = 500
     elite_size = int(pop_size * 0.2)
     pop = generate_population(pop_size, slots, teachers)
     best_fitness_history = []

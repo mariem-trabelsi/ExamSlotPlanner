@@ -277,6 +277,7 @@ class App(tk.Tk):
                     self.teachers[code] = {
                         'nom': row.get('nom_ens', ''),
                         'prenom': row.get('prenom_ens', ''),
+                        'abrv': row.get('abrv_ens', ''),
                         'email': row.get('email_ens', '') if 'email_ens' in row else '',
                         'grade': row['grade_code_ens'],
                         'quota': GRADE_QUOTAS.get(row['grade_code_ens'], 2),
