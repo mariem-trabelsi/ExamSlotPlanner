@@ -14,8 +14,8 @@ from view_methods import (
 
 # Configuration initiale des quotas par grade
 GRADE_QUOTAS = {
-    "PR": 8, "MA": 7, "V": 6, "PTC": 5, "AC": 4,
-    "VA": 4, "AS": 4, "EX": 4, "MC": 4, "PES": 4
+    "PR": 4, "MA": 7, "V": 4, "PTC": 9, "AC": 9,
+    "VA": 4, "AS": 8, "EX": 3, "MC": 4, "PES": 9
 }
 
 

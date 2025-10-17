@@ -63,11 +63,9 @@ def assign_teachers_to_rooms(app):
 
 def check_prof_responsable_presence_simple(app):
     """
-    Logique CORRECTE - SANS DEDUPLICATION:
     - Reprendre TOUS les slots du fichier slots.xlsx (app.slots)
     - Pour chaque slot: si le prof responsable code smart est dans app.best = PRESENT
     - Sinon = ABSENT
-    - Compte le VRAI nombre de profs responsables
     """
     results = []
     

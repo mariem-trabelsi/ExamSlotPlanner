@@ -1,6 +1,5 @@
 """
 Module contenant l'algorithme génétique pour l'optimisation du planning
-VERSION CORRIGÉE - Sans parallelisme pour éviter les segmentation faults
 """
 import random
 import numpy as np
