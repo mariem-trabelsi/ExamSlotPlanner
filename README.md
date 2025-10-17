@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Teacher Supervision Schedule Management Application
 
 ## Description
@@ -51,3 +52,7 @@ python3 app_surveillance.py
 Use the GUI to load slots.csv and teachers.csv.
 Click "Générer Planning" to create the schedule.
 Export the result as CSV or PDF using the respective buttons.
+=======
+# Genetic_AI_gestion_Emploi_temps
+
+>>>>>>> 55af0d80f8a2ce6621ac6c97a011822368b4ed9b
