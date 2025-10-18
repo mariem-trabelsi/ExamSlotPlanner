@@ -242,13 +242,17 @@ def show_by_teacher(app):
     
     app.view_data = data
     app.tree.delete(*app.tree.get_children())
-    app.tree["columns"] = ("Code", "Nom", "Email", "Grade", "Quota",
+    #app.tree["columns"] = ("Code", "Nom", "Email", "Grade", "Quota",
+     #                     "Assigne", "Creneaux", "Statut des vœux")
+    app.tree["columns"] = ("Email", "Nom", "Grade", "Quota",
                           "Assigne", "Creneaux", "Statut des vœux")
     
+    
     cols = {
-        "Code": 60,
-        "Nom": 150,
+        #"Code": 60,
         "Email": 200,
+        "Nom": 150,
+        
         "Grade": 60,
         "Quota": 60,
         "Assigne": 80,
