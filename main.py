@@ -10,7 +10,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 from reportlab.pdfgen import canvas
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from datetime import datetime
@@ -395,6 +395,18 @@ class App(ctk.CTk):
                 command=lambda: self.export_teachers_to_pdf()
             )
         export_btn.pack(side='left', padx=5)
+
+        export_general_btn = ctk.CTkButton(
+            view_buttons_frame,
+            text="📄 Export Général PDF",
+            width=160,
+            height=40,
+            corner_radius=10,
+            fg_color=self.colors['success'],  
+            hover_color=self.colors['hover'],
+            command=lambda: self.export_general_pdf()
+        )
+        export_general_btn.pack(side='right', padx=5)
 
         # Search inputs (right side) - only visible in certain views
         self.search_frame = ctk.CTkFrame(header_container, fg_color='transparent')
@@ -2667,7 +2679,201 @@ class App(ctk.CTk):
         )
         
         return pdf_count
-
+    def export_general_pdf(self, output_folder="exports"):
+        """Exporte un PDF général avec toutes les sessions et leurs enseignants"""
+        if not self.best:
+            self.show_error_message("❌ Erreur", "Veuillez générer le planning d'abord!")
+            return
+        
+        # Create output folder if it doesn't exist
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
+        
+        # Organize data by slot
+        from collections import defaultdict
+        
+        # Group by date and session
+        sessions_data = defaultdict(lambda: defaultdict(list))
+        
+        for slot in sorted(self.best.keys()):
+            try:
+                parts = slot.split()
+                date_str = parts[0]
+                session = parts[1].upper()
+                
+                teachers = self.best[slot]
+                
+                # Get room assignments for this slot
+                room_info = {}
+                if hasattr(self, 'room_assignments') and slot in self.room_assignments:
+                    for room, room_teachers in self.room_assignments[slot].items():
+                        for teacher in room_teachers:
+                            room_info[teacher] = room
+                
+                sessions_data[date_str][session].append({
+                    'teachers': teachers,
+                    'room_info': room_info
+                })
+            except:
+                continue
+        
+        # Day names in French
+        DAY_NAMES_FR = {
+            'Monday': 'Lundi',
+            'Tuesday': 'Mardi',
+            'Wednesday': 'Mercredi',
+            'Thursday': 'Jeudi',
+            'Friday': 'Vendredi',
+            'Saturday': 'Samedi',
+            'Sunday': 'Dimanche'
+        }
+        
+        # Session times
+        SESSION_TIMES = {
+            'S1': '08:30',
+            'S2': '10:45',
+            'S3': '14:00',
+            'S4': '16:15'
+        }
+        
+        # Create PDF filename
+        pdf_filename = os.path.join(output_folder, f"Planning_General_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf")
+        
+        # Create PDF document
+        doc = SimpleDocTemplate(pdf_filename, pagesize=A4,
+                            rightMargin=1.5*cm, leftMargin=1.5*cm,
+                            topMargin=1.5*cm, bottomMargin=1.5*cm)
+        
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        # Custom styles
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=14,
+            textColor=colors.HexColor('#1e3a8a'),
+            spaceAfter=20,
+            alignment=TA_CENTER,
+            fontName='Helvetica-Bold'
+        )
+        
+        subtitle_style = ParagraphStyle(
+            'CustomSubtitle',
+            parent=styles['Normal'],
+            fontSize=12,
+            textColor=colors.HexColor('#1e3a8a'),
+            spaceAfter=15,
+            alignment=TA_CENTER,
+            fontName='Helvetica-Bold'
+        )
+        
+        # Process each date and session
+        for date_str in sorted(sessions_data.keys()):
+            for session in sorted(sessions_data[date_str].keys()):
+                session_info = sessions_data[date_str][session][0]
+                
+                # Parse date
+                try:
+                    date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                    day_name = DAY_NAMES_FR.get(date_obj.strftime('%A'), date_obj.strftime('%A'))
+                    formatted_date = date_obj.strftime('%d/%m/%Y')
+                except:
+                    day_name = ""
+                    formatted_date = date_str
+                
+                # Header section
+                header_data = [
+                    ['GESTION DES EXAMENS ET DÉLIBÉRATIONS', 'EXD-FR-08-01'],
+                    ["Procédure d'exécution des épreuves", f"Date d'approbation\n{datetime.now().strftime('%d%m-%y')}"],
+                    ["Liste d'affectation des surveillants", 'Page 1/1']
+                ]
+                
+                header_table = Table(header_data, colWidths=[15*cm, 3*cm])
+                header_table.setStyle(TableStyle([
+                    ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#1e3a8a')),
+                    ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#e6f0ff')),
+                    ('FONT', (0, 0), (-1, -1), 'Helvetica-Bold', 10),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#1e3a8a')),
+                ]))
+                
+                elements.append(header_table)
+                elements.append(Spacer(1, 0.8*cm))
+                
+                # Session title
+                session_time = SESSION_TIMES.get(session, 'N/A')
+                session_title = f"AU : 2024-2025 - Semestre : 2 - Session : Principale<br/>Date : {formatted_date} - Séance : {session}"
+                elements.append(Paragraph(session_title, subtitle_style))
+                elements.append(Spacer(1, 0.5*cm))
+                
+                # Prepare teachers table
+                table_data = [['Enseignant', 'Salle', 'Signature']]
+                
+                # Get all teachers for this session
+                teachers = session_info['teachers']
+                room_info = session_info['room_info']
+                
+                # Sort teachers by name
+                teacher_list = []
+                for teacher_code in sorted(teachers):
+                    teacher_code_str = str(teacher_code)
+                    if hasattr(self, 'teachers') and teacher_code_str in self.teachers:
+                        teacher_data = self.teachers[teacher_code_str]
+                        nom = teacher_data.get('nom', '')
+                        prenom = teacher_data.get('prenom', '')
+                        full_name = f"{nom} {prenom}" if nom and prenom else f"#{teacher_code}"
+                    else:
+                        full_name = f"#{teacher_code}"
+                    
+                    # Get room for this teacher
+                    room = room_info.get(teacher_code, '')
+                    
+                    teacher_list.append((full_name, room))
+                
+                # Add teachers to table
+                for full_name, room in sorted(teacher_list):
+                    table_data.append([full_name, room, ''])
+                
+                # Create table
+                teachers_table = Table(table_data, colWidths=[8*cm, 5*cm, 5*cm])
+                teachers_table.setStyle(TableStyle([
+                    # Header row
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e3a8a')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 11),
+                    ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    # Data rows
+                    ('FONT', (0, 1), (-1, -1), 'Helvetica', 10),
+                    ('ALIGN', (0, 1), (0, -1), 'LEFT'),
+                    ('ALIGN', (1, 1), (-1, -1), 'CENTER'),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#1e3a8a')),
+                    ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#e6f0ff')]),
+                    # Minimum row height for signature space
+                    ('ROWHEIGHT', (0, 1), (-1, -1), 0.8*cm)
+                ]))
+                
+                elements.append(teachers_table)
+                
+                # Add page break between sessions (except for the last one)
+                elements.append(PageBreak())
+        
+        # Remove last page break
+        if elements and isinstance(elements[-1], PageBreak):
+            elements.pop()
+        
+        # Build PDF
+        doc.build(elements)
+        
+        # Show success message
+        self.show_success_message(
+            "✅ Export Réussi", 
+            f"PDF général créé: {os.path.basename(pdf_filename)}"
+        )
+        
+        return pdf_filename
     def export_csv(self):
         if not self.best:
             messagebox.showerror("Erreur", "Generez le planning d'abord!")
