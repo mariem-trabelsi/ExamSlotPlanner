@@ -467,6 +467,9 @@ class App(ctk.CTk):
         self.tree.tag_configure("optimal", background="#D1FAE5")
         self.tree.tag_configure("acceptable", background="#FEF3C7")
         self.tree.tag_configure("problem", background="#FEE2E2")
+        self.tree.tag_configure("optimal_light", background=self.adjust_color("#D1FAE5", 30))
+        self.tree.tag_configure("acceptable_light", background=self.adjust_color("#FEF3C7", 30))
+        self.tree.tag_configure("problem_light", background=self.adjust_color("#FEE2E2", 30))
         self.tree.tag_configure("header", background=self.colors['hover'], 
                             font=("Segoe UI", 11, "bold"))
         self.tree.tag_configure("ok", background="#D1FAE5")
@@ -1451,7 +1454,8 @@ class App(ctk.CTk):
         item = self.tree.identify_row(event.y)
         if not item:
             return
-        
+        if self.current_view != "planning":
+            return
         values = self.tree.item(item, "values")
         
         # Check if it's a session row (not a date group)
@@ -1911,51 +1915,161 @@ class App(ctk.CTk):
                 self.show_error_message("❌ Erreur",
                     "Enseignant non trouvé dans le créneau source")
     def show_by_teacher(self):
-        """Vue par enseignant avec statistiques complètes"""
+        """Vue par enseignant avec statistiques complètes et UI améliorée"""
         if not self.best:
             self.show_error_message("❌ Erreur", "Veuillez générer le planning d'abord!")
             return
         
-        self.tree.delete(*self.tree.get_children())
-        self.tree["columns"] = ("Code", "Nom", "Prénom", "Grade", "Quota", "Assigné", "Créneaux", "Indispos")
+        from datetime import datetime
+        from collections import defaultdict
         
+        self.tree.delete(*self.tree.get_children())
+        self.tree["columns"] = ("Code", "Nom", "Grade", "Stats", "Statut", "Détails")
+        
+        # Column configuration
         cols = {
-            "Code": 80,
-            "Nom": 120,
-            "Prénom": 120,
-            "Grade": 60,
-            "Quota": 60,
-            "Assigné": 80,
-            "Créneaux": 300,
-            "Indispos": 200
+            "Code": {"width": 80, "text": "👤 Code", "anchor": "center"},
+            "Nom": {"width": 200, "text": "📝 Nom Complet", "anchor": "w"},
+            "Grade": {"width": 100, "text": "🎓 Grade", "anchor": "center"},
+            "Stats": {"width": 150, "text": "📊 Quota/Assigné", "anchor": "center"},
+            "Statut": {"width": 120, "text": "✓ Statut", "anchor": "center"},
+            "Détails": {"width": 400, "text": "📅 Créneaux (cliquer pour développer)", "anchor": "w"}
         }
         
-        for col, width in cols.items():
-            self.tree.heading(col, text=col)
-            self.tree.column(col, width=width)
+        for col, config in cols.items():
+            self.tree.heading(col, text=config["text"])
+            self.tree.column(col, width=config["width"], anchor=config["anchor"])
         
-        teacher_slots = {teacher: [] for teacher in self.teachers}
+        # Calculate teacher assignments
+        teacher_slots = defaultdict(list)
         for slot in self.best:
             for teacher in self.best[slot]:
                 teacher_slots[teacher].append(slot)
         
+        # Day names in French
+        DAY_NAMES_FR = {
+            'Monday': 'Lun', 'Tuesday': 'Mar', 'Wednesday': 'Mer',
+            'Thursday': 'Jeu', 'Friday': 'Ven', 'Saturday': 'Sam', 'Sunday': 'Dim'
+        }
+        
+        # Function to format slots compactly
+        def format_slots_summary(slots):
+            """Create a compact summary of slots"""
+            if not slots:
+                return "Aucun créneau"
+            
+            # Group by date
+            slots_by_date = defaultdict(list)
+            for slot in sorted(slots):
+                try:
+                    parts = slot.split()
+                    date_str = parts[0]
+                    session = parts[1].upper()
+                    slots_by_date[date_str].append(session)
+                except:
+                    continue
+            
+            # Create compact representation
+            summary_parts = []
+            for date_str in sorted(slots_by_date.keys()):
+                try:
+                    date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                    day_name = DAY_NAMES_FR.get(date_obj.strftime('%A'), '')
+                    date_short = date_obj.strftime('%d/%m')
+                    sessions = sorted(slots_by_date[date_str])
+                    summary_parts.append(f"{day_name} {date_short}: {', '.join(sessions)}")
+                except:
+                    summary_parts.append(f"{date_str}: {', '.join(sorted(slots_by_date[date_str]))}")
+            
+            # Limit to first 2 dates if too many
+            if len(summary_parts) > 2:
+                visible = " | ".join(summary_parts[:2])
+                remaining = len(summary_parts) - 2
+                return f"{visible} ... (+{remaining} dates)"
+            else:
+                return " | ".join(summary_parts)
+        
+        # Insert assigned teachers
         for teacher in sorted(teacher_slots.keys()):
             if teacher_slots[teacher]:
                 data = self.teachers[teacher]
                 num_gardes = len(teacher_slots[teacher])
-                tag = "over_quota" if num_gardes > data['quota'] else ""
+                quota = data['quota']
                 
-                self.tree.insert("", "end", values=(
+                # Determine status
+                if num_gardes > quota:
+                    status = "⚠️ Dépassé"
+                    tag = "over_quota"
+                elif num_gardes == quota:
+                    status = "✅ Complet"
+                    tag = "optimal"
+                else:
+                    status = "🟢 OK"
+                    tag = "acceptable"
+                
+                # Full name
+                full_name = f"{data['prenom']} {data['nom']}"
+                
+                # Stats display
+                stats = f"{num_gardes}/{quota}"
+                
+                # Compact slots summary
+                slots_summary = format_slots_summary(teacher_slots[teacher])
+                
+                # Insert parent row (teacher summary)
+                parent = self.tree.insert("", "end", values=(
                     teacher,
-                    data['nom'],
-                    data['prenom'],
+                    full_name,
                     data['grade'],
-                    data['quota'],
-                    f"{num_gardes} {'⚠️' if num_gardes > data['quota'] else '✓'}",
-                    ", ".join(sorted(teacher_slots[teacher])),
-                    ", ".join(sorted(data['indispo'])) if data['indispo'] else "Aucune"
-                ), tags=(tag,))
+                    stats,
+                    status,
+                    slots_summary
+                ), tags=(tag,), open=False)
+                
+                # Insert child rows (detailed slots) - hidden by default
+                for slot in sorted(teacher_slots[teacher]):
+                    try:
+                        parts = slot.split()
+                        date_str = parts[0]
+                        session = parts[1].upper()
+                        
+                        # Format date
+                        date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                        day_name = DAY_NAMES_FR.get(date_obj.strftime('%A'), date_obj.strftime('%A'))
+                        formatted_date = f"{day_name} {date_obj.strftime('%d/%m/%Y')}"
+                        
+                        # Session time
+                        session_times = {'S1': '08:30', 'S2': '10:45', 'S3': '14:00', 'S4': '16:15'}
+                        time = session_times.get(session, "N/A")
+                        
+                        self.tree.insert(parent, "end", values=(
+                            "",
+                            formatted_date,
+                            session,
+                            time,
+                            "📅 Créneau",
+                            ""
+                        ), tags=(tag))
+                        # tags = (f"session_{session.lower()}",) for colored sessions.
+                    except:
+                        self.tree.insert(parent, "end", values=(
+                            "", slot, "", "", "", ""
+                        ))
+                
+                # Add unavailability info if exists
+                if data['indispo']:
+                    unavail_summary = format_slots_summary(data['indispo'])
+                    self.tree.insert(parent, "end", values=(
+                        "", "🚫 Indisponibilités", "", "", "", unavail_summary
+                    ), tags=("separator",))
         
+        # Add separator between assigned and unassigned
+        if teacher_slots:
+            self.tree.insert("", "end", values=(
+                "━━━━", "━━━━━━━━━━━━━━━━━━━━━", "━━━━", "━━━━━━━━", "━━━━━━━", "━━━━━━━━━━━━━━━━━━━━━"
+            ), tags=("separator",))
+        
+        # Insert unassigned teachers who should participate
         assigned_teachers = set().union(*self.best.values())
         available_teachers = {t for t in self.teachers 
                             if self.teachers[t]['participe_surveillance'] 
@@ -1963,16 +2077,33 @@ class App(ctk.CTk):
         
         for teacher in sorted(available_teachers):
             data = self.teachers[teacher]
-            self.tree.insert("", "end", values=(
+            full_name = f"{data['prenom']} {data['nom']}"
+            
+            parent = self.tree.insert("", "end", values=(
                 teacher,
-                data['nom'],
-                data['prenom'],
+                full_name,
                 data['grade'],
-                data['quota'],
-                "0 ⚠️",
-                "Non assigné",
-                ", ".join(sorted(data['indispo'])) if data['indispo'] else "Aucune"
-            ), tags=("unassigned",))
+                f"0/{data['quota']}",
+                "⚠️ Non assigné",
+                "Aucun créneau assigné"
+            ), tags=("unassigned",), open=False)
+            
+            # Show unavailability
+            if data['indispo']:
+                unavail_summary = format_slots_summary(data['indispo'])
+                self.tree.insert(parent, "end", values=(
+                    "", "🚫 Indisponibilités", "", "", "", unavail_summary
+                ), tags=("separator",))
+        
+        # Add summary statistics
+        if hasattr(self, 'summary_label'):
+            total_assigned = len(set().union(*self.best.values()))
+            total_eligible = sum(1 for t in self.teachers.values() if t['participe_surveillance'])
+            over_quota = sum(1 for t in teacher_slots if len(teacher_slots[t]) > self.teachers[t]['quota'])
+            
+            self.summary_label.configure(
+                text=f"👥 {total_assigned}/{total_eligible} enseignants assignés | ⚠️ {over_quota} dépassements de quota"
+            )
     def show_by_day(self):
         """Vue par jour"""
         if not self.best:
@@ -1999,36 +2130,183 @@ class App(ctk.CTk):
         for day in sorted(day_slots.keys()):
             slots_str = ", ".join(sorted(day_slots[day]))
             self.tree.insert("", "end", values=(day, len(day_slots[day]), slots_str))
+
     def show_by_room(self):
-        """Vue par salle avec les enseignants assignés"""
+        """Vue par salle avec structure collapsible améliorée"""
         if not self.best:
             self.show_error_message("❌ Erreur", "Veuillez générer le planning d'abord!")
             return
         
-        self.tree.delete(*self.tree.get_children())
-        self.tree["columns"] = ("Créneau", "Salle", "Nb Profs", "Enseignants")
-        self.tree.heading("Créneau", text="Créneau")
-        self.tree.heading("Salle", text="Salle")
-        self.tree.heading("Nb Profs", text="Nb Profs")
-        self.tree.heading("Enseignants", text="Enseignants Assignés")
+
         
-        self.tree.column("Créneau", width=150)
-        self.tree.column("Salle", width=100)
-        self.tree.column("Nb Profs", width=80)
-        self.tree.column("Enseignants", width=600)
+        self.tree.delete(*self.tree.get_children())
+        self.tree["columns"] = ("Salle", "Stats", "Statut", "Détails")
+        
+        # Column configuration
+        cols = {
+            "Salle": {"width": 150, "text": "🏫 Salle", "anchor": "center"},
+            "Stats": {"width": 150, "text": "📊 Créneaux", "anchor": "center"},
+            "Statut": {"width": 120, "text": "✓ Statut", "anchor": "center"},
+            "Détails": {"width": 500, "text": "📅 Résumé (cliquer pour développer)", "anchor": "w"}
+        }
+        
+        for col, config in cols.items():
+            self.tree.heading(col, text=config["text"])
+            self.tree.column(col, width=config["width"], anchor=config["anchor"])
+        
+        # Organize data by room
+        room_data = defaultdict(list)
         
         for slot in sorted(self.best.keys()):
             if slot in self.room_assignments:
-                for room, teachers in sorted(self.room_assignments[slot].items()):
-                    nb_profs = len(teachers)
-                    tag = "optimal" if nb_profs == 2 else "acceptable" if nb_profs <= 4 else "problem"
+                for room, teachers in self.room_assignments[slot].items():
+                    room_data[room].append({
+                        'slot': slot,
+                        'teachers': teachers,
+                        'nb_profs': len(teachers)
+                    })
+        
+        # Day names in French
+        DAY_NAMES_FR = {
+            'Monday': 'Lun', 'Tuesday': 'Mar', 'Wednesday': 'Mer',
+            'Thursday': 'Jeu', 'Friday': 'Ven', 'Saturday': 'Sam', 'Sunday': 'Dim'
+        }
+        
+        # Function to create compact summary
+        def create_room_summary(assignments):
+            """Create compact summary of room usage"""
+            total_slots = len(assignments)
+            avg_profs = sum(a['nb_profs'] for a in assignments) / total_slots if total_slots > 0 else 0
+            
+            # Show first 2 slots
+            preview = []
+            for assign in assignments[:2]:
+                try:
+                    parts = assign['slot'].split()
+                    date_str = parts[0]
+                    session = parts[1].upper()
+                    date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                    day_name = DAY_NAMES_FR.get(date_obj.strftime('%A'), '')
+                    date_short = date_obj.strftime('%d/%m')
+                    preview.append(f"{day_name} {date_short} {session}")
+                except:
+                    preview.append(assign['slot'])
+            
+            summary = " | ".join(preview)
+            if total_slots > 2:
+                summary += f" ... (+{total_slots - 2})"
+            
+            return summary
+        
+        # Insert each room with its assignments
+        for room in sorted(room_data.keys()):
+            assignments = room_data[room]
+            total_slots = len(assignments)
+            
+            # Calculate statistics
+            total_profs = sum(a['nb_profs'] for a in assignments)
+            avg_profs = total_profs / total_slots if total_slots > 0 else 0
+            problem_count = sum(1 for a in assignments if a['nb_profs'] > 4)
+            optimal_count = sum(1 for a in assignments if a['nb_profs'] == 2)
+            
+            # Determine status
+            if problem_count > 0:
+                status = f"⚠️ {problem_count} problème(s)"
+                tag = "problem"
+            elif optimal_count == total_slots:
+                status = "✅ Optimal"
+                tag = "optimal"
+            else:
+                status = "🟢 OK"
+                tag = "acceptable"
+            
+            # Stats display
+            stats = f"{total_slots} créneaux"
+            
+            # Create summary
+            summary = create_room_summary(assignments)
+            
+            # Insert parent row (room summary)
+            parent = self.tree.insert("", "end", values=(
+                room,
+                stats,
+                status,
+                summary
+            ), tags=(tag,), open=False)
+            
+            # Insert child rows (detailed slots) - hidden by default
+            for assign in sorted(assignments, key=lambda x: x['slot']):
+                try:
+                    parts = assign['slot'].split()
+                    date_str = parts[0]
+                    session = parts[1].upper()
                     
-                    self.tree.insert("", "end", values=(
-                        slot, 
-                        room, 
-                        f"{nb_profs} {'✓' if nb_profs == 2 else '⚠️' if nb_profs > 4 else ''}", 
-                        ", ".join(sorted(teachers))
-                    ), tags=(tag,))
+                    # Format date
+                    date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                    day_name = DAY_NAMES_FR.get(date_obj.strftime('%A'), date_obj.strftime('%A'))
+                    formatted_date = f"{day_name} {date_obj.strftime('%d/%m/%Y')}"
+                    
+                    # Session time
+                    session_times = {'S1': '08:30', 'S2': '10:45', 'S3': '14:00', 'S4': '16:15'}
+                    time = session_times.get(session, "N/A")
+                    
+                    # Format teachers
+                    nb_profs = assign['nb_profs']
+                    teachers_list = []
+                    for teacher_code in sorted(assign['teachers']):
+                        teacher_code_str = str(teacher_code)
+                        if hasattr(self, 'teachers') and teacher_code_str in self.teachers:
+                            teacher_info = self.teachers[teacher_code_str]
+                            nom = teacher_info.get('nom', '')
+                            prenom = teacher_info.get('prenom', '')
+                            if nom and prenom:
+                                teachers_list.append(f"{prenom} {nom}")
+                            else:
+                                teachers_list.append(f"#{teacher_code}")
+                        else:
+                            teachers_list.append(f"#{teacher_code}")
+                    
+                    teachers_display = ", ".join(teachers_list)
+                    
+                    # Determine child tag based on number of profs
+                    if nb_profs > 4:
+                        child_tag = "problem_light"
+                        status_icon = "⚠️"
+                    elif nb_profs == 2:
+                        child_tag = "optimal_light"
+                        status_icon = "✅"
+                    else:
+                        child_tag = "acceptable_light"
+                        status_icon = "🟢"
+                    
+                    self.tree.insert(parent, "end", values=(
+                        f"{formatted_date} - {session} ({time})",
+                        f"{nb_profs} profs {status_icon}",
+                        "",
+                        teachers_display
+                    ), tags=(child_tag,))
+                    
+                except Exception as e:
+                    # Fallback for unexpected format
+                    self.tree.insert(parent, "end", values=(
+                        assign['slot'],
+                        f"{assign['nb_profs']} profs",
+                        "",
+                        ", ".join(sorted(assign['teachers']))
+                    ))
+        
+        # Add summary statistics
+        if hasattr(self, 'summary_label'):
+            total_rooms = len(room_data)
+            total_assignments = sum(len(assignments) for assignments in room_data.values())
+            problem_assignments = sum(
+                sum(1 for a in assignments if a['nb_profs'] > 4) 
+                for assignments in room_data.values()
+            )
+            
+            self.summary_label.configure(
+                text=f"🏫 {total_rooms} salles utilisées | 📊 {total_assignments} créneaux totaux | ⚠️ {problem_assignments} surcharges"
+            )
     def show_general_info(self):
         """Vue des informations générales"""
         if not self.best:
