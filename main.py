@@ -15,7 +15,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from datetime import datetime
 import os
-
+from login import LoginApp
 
 from genetic_algorithm import (
     run_ga_optimized, fitness, is_valid_teacher, 
@@ -3007,8 +3007,28 @@ class App(ctk.CTk):
                      corner_radius=10,
                      command=msg_window.destroy).pack(pady=(0, 20))
 
-
 if __name__ == "__main__":
-    app = App()
+    # Lancer la fenêtre de login
+    app = LoginApp()
+
+    def after_login():
+        try:
+            app.destroy()  # Ferme la fenêtre de login
+        except:
+            pass  # Ignorer les erreurs de destruction
+            
+        # Lancer l'application principale
+        main_app = App()
+        main_app.mainloop()
+
+    # Remplacer la méthode existante avec gestion d'erreur
+    def safe_open_main_app():
+        try:
+            after_login()
+        except Exception as e:
+            print(f"Error during login transition: {e}")
+            # Fallback: lancer l'app principale même en cas d'erreur
+            App().mainloop()
+
+    app.open_main_application = safe_open_main_app
     app.mainloop()
-  
