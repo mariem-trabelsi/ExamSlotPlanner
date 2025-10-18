@@ -8,7 +8,8 @@ from datetime import datetime, timedelta
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from PIL import Image, ImageTk
-
+from collections import defaultdict
+from datetime import datetime
 # Configuration initiale des quotas par grade
 GRADE_QUOTAS = {
     "PR": 8,
@@ -36,6 +37,13 @@ SESSION_ORDER = {
     "S2": 2,
     "S3": 3,
     "S4": 4
+}
+
+SESSION_COLORS = {
+    's1': ('#E3F2FD', '#1976D2'),  # Blue
+    's2': ('#E8F5E9', '#388E3C'),  # Green
+    's3': ('#FFF3E0', '#F57C00'),  # Orange
+    's4': ('#F3E5F5', '#7B1FA2')   # Purple
 }
 
 def parse_datetime(slot_str):
@@ -310,7 +318,7 @@ def run_ga_improved(slots, teachers, progress_callback=None):
     """
     slots_dict = {slot: data for slot, data in slots}
     pop_size = 100
-    generations = 500
+    generations = 2
     elite_size = 10
     
     pop = generate_population(pop_size, slots, teachers)
@@ -1189,7 +1197,13 @@ class ModernApp(ctk.CTk):
         self.teachers_loaded = False
         self.wishes_loaded = False
         self.current_view = "welcome"
-        
+
+        # Add these new attributes for drag & drop
+        self.drag_data = {"item": None, "teacher": None, "source_slot": None}
+        self.selected_teacher = None
+        self.context_menu = None
+        self.selected_teacher_for_transfer = None
+
         # Layout principal avec sidebar
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
@@ -1199,6 +1213,8 @@ class ModernApp(ctk.CTk):
         self.create_main_content()
         self.quota_window = None
         self.quota_entries = {}
+
+        
 
     def create_sidebar(self):
         """Sidebar à gauche avec navigation"""
@@ -1715,11 +1731,7 @@ class ModernApp(ctk.CTk):
         messagebox.showinfo("Export", "Export Excel")
 
 import os
-print("Current working directory:", os.getcwd())
-print("Files in current directory:", os.listdir())
-if __name__ == "__main__":
-    app = ModernApp()
-    app.mainloop()
+
 
 class ModernApp(ctk.CTk):
     def __init__(self):
@@ -1740,13 +1752,14 @@ class ModernApp(ctk.CTk):
             'success': '#10B981',
             'warning': '#F59E0B',
             'error': '#EF4444',
-            'bg': '#FAFAFA',
+            'bg': '#E4E4E4',
             'card': '#FFFFFF',
             'sidebar': '#F8FAFC',
             'text': '#1F2937',
             'text_secondary': '#6B7280',
             'border': '#E5E7EB',
-            'hover': '#F3F4F6'
+            'hover': '#F3F4F6',
+            'test': "#E2E2E2",
         }
         
         # Data variables
@@ -1787,14 +1800,14 @@ class ModernApp(ctk.CTk):
         self.main_content = ctk.CTkFrame(content, fg_color='transparent')
         self.main_content.pack(side='left', fill='both', expand=True, padx=(20, 0))
         
-        # # Action cards
+        # Action cards
         # self.create_action_cards()
         
         # Data view area
         self.create_data_view()
         
     def create_header(self, parent):
-        header = ctk.CTkFrame(parent, fg_color=self.colors['card'], 
+        header = ctk.CTkFrame(parent, fg_color=self.colors['test'], 
                              corner_radius=16, height=100)
         header.pack(fill='x', pady=(0, 0))
         header.pack_propagate(False)
@@ -1803,7 +1816,7 @@ class ModernApp(ctk.CTk):
         logo_container = ctk.CTkFrame(header, fg_color='transparent')
         logo_container.pack(side='left', padx=30, pady=20)
         
-        logo = ctk.CTkFrame(logo_container, fg_color=self.colors['primary'],
+        logo = ctk.CTkFrame(logo_container, fg_color='transparent',
                            width=56, height=56, corner_radius=14)
         logo.pack(side='left')
         logo.pack_propagate(False)
@@ -1839,15 +1852,15 @@ class ModernApp(ctk.CTk):
         
         self.create_modern_button(
             sidebar, "Charger Créneaux", "📊", 
-            self.load_slots, self.colors['primary'], data_key='slots'
+            self.load_slots, self.colors['error'], data_key='slots'
         )
         self.create_modern_button(
             sidebar, "Charger Enseignants", "👥",
-            self.load_teachers, self.colors['primary'], data_key='teachers'
+            self.load_teachers, self.colors['error'], data_key='teachers'
         )
         self.create_modern_button(
             sidebar, "Charger Vœux", "💭",
-            self.load_wishes, self.colors['primary'], data_key='wishes'
+            self.load_wishes, self.colors['error'], data_key='wishes'
         )
         self.create_modern_button(
             sidebar, "Configurer Quotas", "⚙️",
@@ -1866,6 +1879,9 @@ class ModernApp(ctk.CTk):
             sidebar, "Générer Planning", "▶️",
             self.generate_planning, self.colors['success'], large=True
         )
+        # Section: Génération
+        self.create_section(sidebar, "🧬 Historique du Planning", 0)
+
         self.create_modern_button(
             sidebar, "Voir Historique", "▶️",
             self.generate_planning, self.colors['success'], large=True
@@ -1922,6 +1938,7 @@ class ModernApp(ctk.CTk):
         
         # Add status indicator if this is a data loading button
         status_icon = ""
+        btn_color = color
         if data_key:
             status_icon = " ✅" if self.data_loaded.get(data_key, False) else " ⚠️"
         
@@ -1950,7 +1967,8 @@ class ModernApp(ctk.CTk):
             btn = self.data_buttons[data_key]
             status_icon = " ✅" if self.data_loaded[data_key] else " ⚠️"  # Changed: space before icon
             btn.configure(text=f"{icon}  {text}{status_icon}")  # Changed: status at the end
-    
+            btn.configure(fg_color=self.colors['success'])
+            btn.configure(hover_color=self.adjust_color(self.colors['success'], -20))
     def adjust_color(self, hex_color, adjustment):
         """Darken or lighten a color"""
         hex_color = hex_color.lstrip('#')
@@ -1960,105 +1978,164 @@ class ModernApp(ctk.CTk):
         b = max(0, min(255, b + adjustment))
         return f'#{r:02x}{g:02x}{b:02x}'
         
-    # def create_action_cards(self):
-    #     cards_frame = ctk.CTkFrame(self.main_content, fg_color='transparent', height=120)
-    #     cards_frame.pack(fill='x', pady=(0, 20))
-    #     cards_frame.pack_propagate(False)
+    def create_action_cards(self):
         
-    #     # Visualization cards
-    #     views = [
-    #         ("👤 Par Enseignant", self.show_by_teacher, self.colors['primary']),
-    #         ("📅 Par Jour", self.show_by_day, self.colors['success']),
-    #         ("🏢 Par Salle", self.show_by_room, self.colors['warning']),
-    #     ]
+        cards_frame = ctk.CTkFrame(self.main_content, fg_color='transparent', height=120)
+        cards_frame.pack(fill='x', pady=(0, 20))
+        cards_frame.pack_propagate(False)
         
-    #     for i, (text, command, color) in enumerate(views):
-    #         card = ctk.CTkFrame(cards_frame, fg_color=self.colors['card'],
-    #                            corner_radius=12)
-    #         card.pack(side='left', fill='both', expand=True, 
-    #                  padx=(0 if i == 0 else 10, 0))
-            
-    #         icon_frame = ctk.CTkFrame(card, fg_color=color,
-    #                                  width=48, height=48, corner_radius=12)
-    #         icon_frame.pack(pady=(20, 10))
-    #         icon_frame.pack_propagate(False)
-            
-    #         ctk.CTkLabel(icon_frame, text=text.split()[0],
-    #                     font=("Segoe UI Emoji", 20)).place(relx=0.5, rely=0.5, anchor='center')
-            
-    #         ctk.CTkLabel(card, text=" ".join(text.split()[1:]),
-    #                     font=("Segoe UI", 13, "bold"),
-    #                     text_color=self.colors['text']).pack()
-            
-    #         ctk.CTkButton(
-    #             card,
-    #             text="Afficher",
-    #             font=("Segoe UI", 12),
-    #             fg_color='transparent',
-    #             hover_color=self.colors['hover'],
-    #             text_color=color,
-    #             height=32,
-    #             corner_radius=8,
-    #             command=command
-    #         ).pack(pady=(10, 20))
-            
-    #     # Info cards
-    #     info_cards = [
-    #         ("📊 Qualité", self.show_planning_quality, self.colors['error']),
-    #         ("ℹ️ Infos", self.show_general_info, self.colors['text_secondary']),
-    #     ]
+        # Visualization cards
+        views = [
+            ("👤 Par Enseignant", self.show_by_teacher, self.colors['primary']),
+            ("📅 Par Jour", self.show_by_day, self.colors['success']),
+            ("🏢 Par Salle", self.show_by_room, self.colors['warning']),
+        ]
         
-    #     for text, command, color in info_cards:
-    #         card = ctk.CTkFrame(cards_frame, fg_color=self.colors['card'],
-    #                            corner_radius=12, width=150)
-    #         card.pack(side='left', fill='y', padx=(10, 0))
-    #         card.pack_propagate(False)
+        for i, (text, command, color) in enumerate(views):
+            card = ctk.CTkFrame(cards_frame, fg_color=self.colors['card'],
+                               corner_radius=12)
+            card.pack(side='left', fill='both', expand=True, 
+                     padx=(0 if i == 0 else 10, 0))
             
-    #         icon_frame = ctk.CTkFrame(card, fg_color=color,
-    #                                  width=40, height=40, corner_radius=10)
-    #         icon_frame.pack(pady=(20, 8))
-    #         icon_frame.pack_propagate(False)
+            icon_frame = ctk.CTkFrame(card, fg_color=color,
+                                     width=48, height=48, corner_radius=12)
+            icon_frame.pack(pady=(20, 10))
+            icon_frame.pack_propagate(False)
             
-    #         ctk.CTkLabel(icon_frame, text=text.split()[0],
-    #                     font=("Segoe UI Emoji", 18)).place(relx=0.5, rely=0.5, anchor='center')
+            ctk.CTkLabel(icon_frame, text=text.split()[0],
+                        font=("Segoe UI Emoji", 20)).place(relx=0.5, rely=0.5, anchor='center')
             
-    #         ctk.CTkLabel(card, text=" ".join(text.split()[1:]),
-    #                     font=("Segoe UI", 12, "bold"),
-    #                     text_color=self.colors['text']).pack()
+            ctk.CTkLabel(card, text=" ".join(text.split()[1:]),
+                        font=("Segoe UI", 13, "bold"),
+                        text_color=self.colors['text']).pack()
             
-    #         ctk.CTkButton(
-    #             card,
-    #             text="Voir",
-    #             font=("Segoe UI", 11),
-    #             fg_color='transparent',
-    #             hover_color=self.colors['hover'],
-    #             text_color=color,
-    #             height=28,
-    #             corner_radius=6,
-    #             command=command
-    #         ).pack(pady=(8, 15))
+            ctk.CTkButton(
+                card,
+                text="Afficher",
+                font=("Segoe UI", 12),
+                fg_color='transparent',
+                hover_color=self.colors['hover'],
+                text_color=color,
+                height=32,
+                corner_radius=8,
+                command=command
+            ).pack(pady=(10, 20))
+            
+        # Info cards
+        info_cards = [
+            ("📊 Qualité", self.show_planning_quality, self.colors['error']),
+            ("ℹ️ Infos", self.show_general_info, self.colors['text_secondary']),
+        ]
+        
+        for text, command, color in info_cards:
+            card = ctk.CTkFrame(cards_frame, fg_color=self.colors['card'],
+                               corner_radius=12, width=150)
+            card.pack(side='left', fill='y', padx=(10, 0))
+            card.pack_propagate(False)
+            
+            icon_frame = ctk.CTkFrame(card, fg_color=color,
+                                     width=40, height=40, corner_radius=10)
+            icon_frame.pack(pady=(20, 8))
+            icon_frame.pack_propagate(False)
+            
+            ctk.CTkLabel(icon_frame, text=text.split()[0],
+                        font=("Segoe UI Emoji", 18)).place(relx=0.5, rely=0.5, anchor='center')
+            
+            ctk.CTkLabel(card, text=" ".join(text.split()[1:]),
+                        font=("Segoe UI", 12, "bold"),
+                        text_color=self.colors['text']).pack()
+            
+            ctk.CTkButton(
+                card,
+                text="Voir",
+                font=("Segoe UI", 11),
+                fg_color='transparent',
+                hover_color=self.colors['hover'],
+                text_color=color,
+                height=28,
+                corner_radius=6,
+                command=command
+            ).pack(pady=(8, 15))
             
     def create_data_view(self):
         view_frame = ctk.CTkFrame(self.main_content, fg_color=self.colors['card'],
-                                 corner_radius=16)
+                                corner_radius=16)
         view_frame.pack(fill='both', expand=True)
         
-        # Search bar
-        search_container = ctk.CTkFrame(view_frame, fg_color='transparent', height=70)
-        search_container.pack(fill='x', padx=25, pady=(20, 10))
-        search_container.pack_propagate(False)
+        # Header with view switcher buttons
+        header_container = ctk.CTkFrame(view_frame, fg_color='transparent', height=70)
+        header_container.pack(fill='x', padx=25, pady=(20, 10))
+        header_container.pack_propagate(False)
         
-        ctk.CTkLabel(search_container, 
+        # Title
+        ctk.CTkLabel(header_container, 
                     text="📋 Données",
                     font=("Segoe UI", 18, "bold"),
                     text_color=self.colors['text']).pack(side='left')
         
-        # Search inputs
-        search_frame = ctk.CTkFrame(search_container, fg_color='transparent')
-        search_frame.pack(side='right')
+        # View switcher buttons (center)
+        view_buttons_frame = ctk.CTkFrame(header_container, fg_color='transparent')
+        view_buttons_frame.pack(side='left', padx=50)
         
+        # Track current view for button styling
+        if not hasattr(self, 'current_view'):
+            self.current_view = 'planning'
+        
+        # Planning view button
+        self.planning_view_btn = ctk.CTkButton(
+            view_buttons_frame,
+            text="📅 Planning",
+            width=120,
+            height=40,
+            corner_radius=10,
+            text_color="black",
+            fg_color=self.colors['primary'] if self.current_view == 'planning' else 'transparent',
+            hover_color=self.colors['hover'],
+            border_width=2,
+            border_color=self.colors['primary'],
+            command=lambda: self.switch_view('planning')
+        )
+        self.planning_view_btn.pack(side='left', padx=5)
+        
+        # Teacher view button
+        self.teacher_view_btn = ctk.CTkButton(
+            view_buttons_frame,
+            text="👥 Par Enseignant",
+            width=140,
+            height=40,
+            corner_radius=10,
+            text_color="black",
+            fg_color=self.colors['primary'] if self.current_view == 'teacher' else 'transparent',
+            hover_color=self.colors['hover'],
+            border_width=2,
+            border_color=self.colors['primary'],
+            command=lambda: self.switch_view('teacher')
+        )
+        self.teacher_view_btn.pack(side='left', padx=5)
+        
+        # Room view button
+        self.room_view_btn = ctk.CTkButton(
+            view_buttons_frame,
+            text="🏫 Par Salle",
+            width=120,
+            height=40,
+            corner_radius=10,
+            text_color="black",
+            fg_color=self.colors['primary'] if self.current_view == 'room' else 'transparent',
+            hover_color=self.colors['hover'],
+            border_width=2,
+            border_color=self.colors['primary'],
+            command=lambda: self.switch_view('room')
+        )
+        self.room_view_btn.pack(side='left', padx=5)
+        
+        # Search inputs (right side) - only visible in certain views
+        self.search_frame = ctk.CTkFrame(header_container, fg_color='transparent')
+        self.search_frame.pack(side='right')
+        
+        # Teacher search (for all views)
         self.teacher_search = ctk.CTkEntry(
-            search_frame,
+            self.search_frame,
             placeholder_text="🔍 Rechercher enseignant...",
             width=200,
             height=40,
@@ -2067,10 +2144,11 @@ class ModernApp(ctk.CTk):
             border_color=self.colors['border']
         )
         self.teacher_search.pack(side='left', padx=5)
-        self.teacher_search.bind('<KeyRelease>', lambda e: self.filter_tree('teacher'))
+        self.teacher_search.bind('<KeyRelease>', lambda e: self.filter_by_teacher())
         
+        # Day search (only for planning view)
         self.day_search = ctk.CTkEntry(
-            search_frame,
+            self.search_frame,
             placeholder_text="🔍 Rechercher jour...",
             width=200,
             height=40,
@@ -2079,10 +2157,11 @@ class ModernApp(ctk.CTk):
             border_color=self.colors['border']
         )
         self.day_search.pack(side='left', padx=5)
-        self.day_search.bind('<KeyRelease>', lambda e: self.filter_tree('day'))
+        self.day_search.bind('<KeyRelease>', lambda e: self.filter_by_date())
         
+        # Room search (only for room view)
         self.room_search = ctk.CTkEntry(
-            search_frame,
+            self.search_frame,
             placeholder_text="🔍 Rechercher salle...",
             width=200,
             height=40,
@@ -2090,8 +2169,7 @@ class ModernApp(ctk.CTk):
             border_width=1,
             border_color=self.colors['border']
         )
-        self.room_search.pack(side='left', padx=5)
-        self.room_search.bind('<KeyRelease>', lambda e: self.filter_tree('room'))
+        # Start hidden, will be shown in room view
         
         # Treeview with modern styling
         tree_container = ctk.CTkFrame(view_frame, fg_color='transparent')
@@ -2109,26 +2187,26 @@ class ModernApp(ctk.CTk):
         style.theme_use('clam')
         
         style.configure("Modern.Treeview",
-                       background=self.colors['card'],
-                       foreground=self.colors['text'],
-                       fieldbackground=self.colors['card'],
-                       borderwidth=0,
-                       relief='flat',
-                       rowheight=35)
+                    background=self.colors['card'],
+                    foreground=self.colors['text'],
+                    fieldbackground=self.colors['card'],
+                    borderwidth=0,
+                    relief='flat',
+                    rowheight=35)
         
         style.configure("Modern.Treeview.Heading",
-                       background=self.colors['hover'],
-                       foreground=self.colors['text'],
-                       borderwidth=0,
-                       relief='flat',
-                       font=("Segoe UI", 11, "bold"))
+                    background=self.colors['hover'],
+                    foreground=self.colors['text'],
+                    borderwidth=0,
+                    relief='flat',
+                    font=("Segoe UI", 11, "bold"))
         
         style.map('Modern.Treeview',
-                 background=[('selected', self.colors['primary'])],
-                 foreground=[('selected', 'white')])
+                background=[('selected', self.colors['primary'])],
+                foreground=[('selected', 'white')])
         
         style.map('Modern.Treeview.Heading',
-                 background=[('active', self.colors['border'])])
+                background=[('active', self.colors['border'])])
         
         self.tree = ttk.Treeview(
             tree_container,
@@ -2150,10 +2228,140 @@ class ModernApp(ctk.CTk):
         self.tree.tag_configure("acceptable", background="#FEF3C7")
         self.tree.tag_configure("problem", background="#FEE2E2")
         self.tree.tag_configure("header", background=self.colors['hover'], 
-                               font=("Segoe UI", 11, "bold"))
+                            font=("Segoe UI", 11, "bold"))
         self.tree.tag_configure("ok", background="#D1FAE5")
         self.tree.tag_configure("error", background="#FEE2E2")
+        
+        # Session colors for planning view
+        self.tree.tag_configure('session_s1', background='#E3F2FD')
+        self.tree.tag_configure('session_s2', background='#E8F5E9')
+        self.tree.tag_configure('session_s3', background='#FFF3E0')
+        self.tree.tag_configure('session_s4', background='#F3E5F5')
+        self.tree.tag_configure('date_group', background='#D1D5DB', font=('TkDefaultFont', 10, 'bold'))
+        self.tree.tag_configure('separator', background='#BDBDBD')
+        
+        # Update search visibility based on current view
+        self.update_search_visibility()
 
+    def switch_view(self, view_type):
+        """Switch between different view types"""
+        self.current_view = view_type
+        
+        # Update button styles
+        self.planning_view_btn.configure(
+            fg_color=self.colors['primary'] if view_type == 'planning' else 'transparent'
+        )
+        self.teacher_view_btn.configure(
+            fg_color=self.colors['primary'] if view_type == 'teacher' else 'transparent'
+        )
+        self.room_view_btn.configure(
+            fg_color=self.colors['primary'] if view_type == 'room' else 'transparent'
+        )
+        
+        # Update search field visibility
+        self.update_search_visibility()
+        
+        # Clear search fields
+        self.teacher_search.delete(0, 'end')
+        self.day_search.delete(0, 'end')
+        if hasattr(self, 'room_search'):
+            self.room_search.delete(0, 'end')
+        
+        # Display the appropriate view
+        if view_type == 'planning':
+            self.display_planning_result()
+        elif view_type == 'teacher':
+            self.show_by_teacher()
+        elif view_type == 'room':
+            self.show_by_room()
+
+    def update_search_visibility(self):
+        """Show/hide search fields based on current view"""
+        # Remove room search if it exists
+        if hasattr(self, 'room_search'):
+            self.room_search.pack_forget()
+        
+        if self.current_view == 'planning':
+            # Show teacher and day search
+            self.teacher_search.pack(side='left', padx=5)
+            self.day_search.pack(side='left', padx=5)
+        elif self.current_view == 'teacher':
+            # Show only teacher search
+            self.teacher_search.pack(side='left', padx=5)
+            self.day_search.pack_forget()
+        elif self.current_view == 'room':
+            # Show teacher and room search
+            self.teacher_search.pack(side='left', padx=5)
+            self.day_search.pack_forget()
+            self.room_search.pack(side='left', padx=5)
+
+    def filter_by_teacher(self):
+        """Filter the current view by teacher name/code"""
+        search_term = self.teacher_search.get().lower().strip()
+        
+        if not search_term:
+            # If search is empty, restore the current view
+            self.switch_view(self.current_view)
+            return
+        
+        # Get all items in the tree
+        all_items = self.tree.get_children()
+        
+        for item in all_items:
+            values = self.tree.item(item, 'values')
+            
+            # Check if any value contains the search term
+            match = False
+            for value in values:
+                if search_term in str(value).lower():
+                    match = True
+                    break
+            
+            # Show or hide the item
+            if match:
+                self.tree.reattach(item, '', self.tree.index(item))
+            else:
+                self.tree.detach(item)
+            
+            # Also check children (for planning view with grouped dates)
+            children = self.tree.get_children(item)
+            for child in children:
+                child_values = self.tree.item(child, 'values')
+                child_match = False
+                for value in child_values:
+                    if search_term in str(value).lower():
+                        child_match = True
+                        break
+                
+                if child_match:
+                    # Show parent if child matches
+                    self.tree.reattach(item, '', self.tree.index(item))
+                    self.tree.item(item, open=True)
+
+    def filter_by_date(self):
+        """Filter planning view by date"""
+        if self.current_view != 'planning':
+            return
+        
+        search_term = self.day_search.get().lower().strip()
+        
+        if not search_term:
+            # If search is empty, restore planning view
+            self.display_planning_result()
+            return
+        
+        # Get all parent items (dates)
+        all_items = self.tree.get_children()
+        
+        for item in all_items:
+            values = self.tree.item(item, 'values')
+            
+            # Check if date matches
+            if values and search_term in str(values[0]).lower():
+                self.tree.reattach(item, '', self.tree.index(item))
+                self.tree.item(item, open=True)
+            else:
+                self.tree.detach(item)
     # ========== DATA LOADING METHODS ==========
     
     def filter_tree(self, view):
@@ -2465,16 +2673,11 @@ class ModernApp(ctk.CTk):
             # Simulation for demonstration
 
             self.best, self.best_fitness_history = run_ga_improved(self.slots, self.teachers, update_progress)
-            import time
-            for i in range(100):
-                fitness = -1000 + (i * 10)
-                update_progress(i, 100, fitness)
-                time.sleep(0.02)
-            
+
             progress_window.destroy()
             
-            self.display_planning_result()
-            
+            self.display_planning_result_with_edit()
+
             final_fitness = self.best_fitness_history[-1]
             quality = "🟢 Excellent" if final_fitness > -100 else \
                      "🟡 Acceptable" if final_fitness > -1000 else "🔴 Problématique"
@@ -2488,21 +2691,726 @@ class ModernApp(ctk.CTk):
             progress_window.destroy()
             self.show_error_message("❌ Erreur", f"Erreur lors de la génération:\n{str(e)}")
 
+    # def display_planning_result(self):
+    #     """Affiche le planning généré dans le treeview"""
+    #     if not self.best:
+    #         return
+            
+    #     self.tree.delete(*self.tree.get_children())
+    #     self.tree["columns"] = ("Créneau", "Enseignants")
+    #     self.tree.heading("Créneau", text="Créneau")
+    #     self.tree.heading("Enseignants", text="Enseignants Assignés")
+    #     self.tree.column("Créneau", width=200)
+    #     self.tree.column("Enseignants", width=700)
+        
+    #     for slot in sorted(self.best.keys()):
+    #         teachers_assigned = [str(teacher) for teacher in self.best[slot]]
+    #         self.tree.insert("", "end", values=(slot, ", ".join(teachers_assigned)))
     def display_planning_result(self):
-        """Affiche le planning généré dans le treeview"""
+        """Affiche le planning généré dans le treeview avec une meilleure présentation"""
         if not self.best:
             return
-            
+        
+        # Clear existing data
         self.tree.delete(*self.tree.get_children())
-        self.tree["columns"] = ("Créneau", "Enseignants")
-        self.tree.heading("Créneau", text="Créneau")
+        
+        # Configure columns with better structure
+        self.tree["columns"] = ("Date", "Session", "Heure", "Nombre", "Enseignants")
+        
+        # Configure column headings
+        self.tree.heading("Date", text="📅 Date")
+        self.tree.heading("Session", text="🕐 Session")
+        self.tree.heading("Heure", text="⏰ Heure")
+        self.tree.heading("Nombre", text="👥 Nb")
         self.tree.heading("Enseignants", text="Enseignants Assignés")
-        self.tree.column("Créneau", width=200)
-        self.tree.column("Enseignants", width=700)
+        
+        # Configure column widths (will be adjusted later based on content)
+        self.tree.column("Date", width=180, anchor="w", stretch=False, minwidth=180)
+        self.tree.column("Session", width=80, anchor="center", stretch=False, minwidth=80)
+        self.tree.column("Heure", width=80, anchor="center", stretch=False, minwidth=80)
+        self.tree.column("Nombre", width=60, anchor="center", stretch=False, minwidth=60)
+        self.tree.column("Enseignants", width=600, anchor="w", stretch=False, minwidth=600)
+        
+        # Session times mapping
+        SESSION_TIMES = {
+            's1': '08:30',
+            's2': '10:45',
+            's3': '14:00',
+            's4': '16:15'
+        }
+        
+        # Session colors (light colors for better readability)
+        SESSION_COLORS = {
+            's1': '#E3F2FD',  # Light blue
+            's2': '#E8F5E9',  # Light green
+            's3': '#FFF3E0',  # Light orange
+            's4': '#F3E5F5'   # Light purple
+        }
+        
+        # Day names in French
+        DAY_NAMES_FR = {
+            'Monday': 'Lundi',
+            'Tuesday': 'Mardi',
+            'Wednesday': 'Mercredi',
+            'Thursday': 'Jeudi',
+            'Friday': 'Vendredi',
+            'Saturday': 'Samedi',
+            'Sunday': 'Dimanche'
+        }
+        
+        # Organize data by date
+        from collections import defaultdict
+        from datetime import datetime
+        import tkinter.font as tkfont
+        
+        planning_by_date = defaultdict(list)
+        max_teacher_text_length = 0
         
         for slot in sorted(self.best.keys()):
-            teachers_assigned = [str(teacher) for teacher in self.best[slot]]
-            self.tree.insert("", "end", values=(slot, ", ".join(teachers_assigned)))
+            try:
+                # Parse slot format: "YYYY-MM-DD s1"
+                parts = slot.split()
+                date_str = parts[0]
+                session = parts[1].lower()
+                
+                teachers_assigned = self.best[slot]
+                teacher_count = len(teachers_assigned)
+                
+                # Format teacher names with their info if available
+                teacher_display = []
+                for teacher_code in teachers_assigned:
+                    teacher_code_str = str(teacher_code)
+                    if hasattr(self, 'teachers') and teacher_code_str in self.teachers:
+                        teacher_info = self.teachers[teacher_code_str]
+                        nom = teacher_info.get('nom', '')
+                        prenom = teacher_info.get('prenom', '')
+                        if nom and prenom:
+                            teacher_display.append(f"{prenom} {nom} (#{teacher_code})")
+                        else:
+                            teacher_display.append(f"#{teacher_code}")
+                    else:
+                        teacher_display.append(f"#{teacher_code}")
+                
+                # Get time for this session
+                time = SESSION_TIMES.get(session, "N/A")
+                
+                # Format date nicely with day name
+                try:
+                    date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                    day_name = DAY_NAMES_FR.get(date_obj.strftime('%A'), date_obj.strftime('%A'))
+                    formatted_date = f"{day_name} {date_obj.strftime('%d/%m/%Y')}"
+                except:
+                    formatted_date = date_str
+                
+                planning_by_date[date_str].append({
+                    'date': formatted_date,
+                    'session': session.upper(),
+                    'time': time,
+                    'count': teacher_count,
+                    'teachers': ", ".join(teacher_display),
+                    'color': SESSION_COLORS.get(session, '#FFFFFF')
+                })
+                
+                # Track the longest teacher text for column width calculation
+                teacher_text = ", ".join(teacher_display)
+                if len(teacher_text) > max_teacher_text_length:
+                    max_teacher_text_length = len(teacher_text)
+            except Exception as e:
+                # Fallback for unexpected format
+                teachers_assigned = [str(teacher) for teacher in self.best[slot]]
+                self.tree.insert("", "end", values=(slot, "", "", len(teachers_assigned), ", ".join(teachers_assigned)))
+        
+        # Insert data with collapsible date groups
+        for date_str in sorted(planning_by_date.keys()):
+            sessions = planning_by_date[date_str]
+            
+            # Sort sessions by session number (s1, s2, s3, s4)
+            sessions.sort(key=lambda x: x['session'])
+            
+            # Calculate total teachers for this day
+            total_teachers_day = sum(s['count'] for s in sessions)
+            num_sessions = len(sessions)
+            
+            # Create parent item for the date (collapsible group)
+            date_label = sessions[0]['date']
+            parent = self.tree.insert(
+                "", "end",
+                values=(
+                    f"📅 {date_label}",
+                    f"{num_sessions} sessions",
+                    "",
+                    total_teachers_day,
+                    f"{total_teachers_day} enseignants au total"
+                ),
+                tags=('date_group',),
+                open=True  # Start expanded
+            )
+            
+            # Add sessions as children of the date
+            for session_data in sessions:
+                # Create tag name based on session for color coding
+                session_tag = f"session_{session_data['session'].lower()}"
+                
+                self.tree.insert(
+                    parent, "end",
+                    values=(
+                        "",  # Empty date column for child items
+                        session_data['session'],
+                        session_data['time'],
+                        session_data['count'],
+                        session_data['teachers']
+                    ),
+                    tags=(session_tag,)
+                )
+        
+        # Configure session colors
+        self.tree.tag_configure('session_s1', background='#E3F2FD')  # Light blue
+        self.tree.tag_configure('session_s2', background='#E8F5E9')  # Light green
+        self.tree.tag_configure('session_s3', background='#FFF3E0')  # Light orange
+        self.tree.tag_configure('session_s4', background='#F3E5F5')  # Light purple
+        
+        # Configure date group style (parent rows)
+        self.tree.tag_configure('date_group', background='#D1D5DB', font=('TkDefaultFont', 10, 'bold'))
+        
+        # Calculate and set the optimal width for Enseignants column
+        # Each character is approximately 7-8 pixels wide in default font
+        calculated_width = min(max(max_teacher_text_length * 8, 600), 4000)
+        self.tree.column("Enseignants", width=calculated_width, stretch=False)
+        
+        # Add summary label if it exists
+        if hasattr(self, 'summary_label'):
+            total_slots = len(self.best)
+            total_teachers = len(set(t for teachers in self.best.values() for t in teachers))
+            self.summary_label.configure(
+                text=f"📊 Total: {total_slots} créneaux | 👥 {total_teachers} enseignants uniques"
+            )
+        self.setup_edit_mode()
+    def display_planning_result_with_edit(self):
+        """Affiche le planning avec possibilité d'édition (drag & drop et suppression)"""
+        if not self.best:
+            return
+        
+        # Call the existing display function first
+        self.display_planning_result()
+        
+        # Bind events for editing functionality
+        self.tree.bind("<Button-3>", self.show_context_menu)  # Right-click
+        self.tree.bind("<Double-Button-1>", self.on_double_click)  # Double-click to edit
+        
+        # Create context menu
+        self.create_context_menu()
+
+    def create_context_menu(self):
+        """Crée le menu contextuel pour supprimer/déplacer un enseignant"""
+        self.context_menu = tk.Menu(self.tree, tearoff=0)
+        self.context_menu.add_command(label="🗑️ Supprimer cet enseignant", 
+                                    command=self.delete_selected_teacher)
+        self.context_menu.add_command(label="↔️ Déplacer vers...", 
+                                    command=self.show_move_dialog)
+        self.context_menu.add_separator()
+        self.context_menu.add_command(label="❌ Annuler", command=lambda: None)
+
+    def show_context_menu(self, event):
+        """Affiche le menu contextuel sur clic droit"""
+        # Identify the clicked row
+        item = self.tree.identify_row(event.y)
+        if not item:
+            return
+        
+        # Select the item
+        self.tree.selection_set(item)
+        
+        # Get the item values
+        values = self.tree.item(item, "values")
+        
+        # Check if it's a session row (not a date group)
+        if values and values[1]:  # Has a session value
+            # Store the selected item info
+            self.selected_teacher = {
+                'item': item,
+                'slot': f"{values[0].split()[-1] if values[0] else ''} {values[1].lower()}",
+                'teachers_text': values[4]
+            }
+            
+            # Show the context menu
+            try:
+                self.context_menu.tk_popup(event.x_root, event.y_root)
+            finally:
+                self.context_menu.grab_release()
+        
+    def setup_edit_mode(self):
+        """Active le mode édition sur le treeview"""
+        # Bind double-click event
+        self.tree.bind("<Double-Button-1>", self.on_double_click)
+    def on_double_click(self, event):
+        """Gère le double-clic pour éditer la liste des enseignants"""
+        item = self.tree.identify_row(event.y)
+        if not item:
+            return
+        
+        values = self.tree.item(item, "values")
+        
+        # Check if it's a session row (not a date group)
+        if values and values[1]:  # Has a session value
+            # Get the parent item to retrieve the date
+            parent = self.tree.parent(item)
+            if parent:
+                parent_values = self.tree.item(parent, "values")
+                # Extract date from parent (format: " Lundi 13/05/2025")
+                date_text = parent_values[0] if parent_values else ""
+                # Pass both item, values, and the date from parent
+                print(date_text)
+                self.open_teacher_editor(item, values, date_text)
+            else:
+                # If no parent (shouldn't happen), try with empty date
+                self.open_teacher_editor(item, values, "")
+            
+    def open_teacher_editor(self, item, values, parent_date_text):
+        """Ouvre une fenêtre pour éditer la liste des enseignants d'une session"""
+        # Create dialog window
+        editor_window = ctk.CTkToplevel(self)
+        editor_window.title("✏️ Éditer les enseignants")
+        editor_window.geometry("800x600")
+        editor_window.transient(self)
+        editor_window.grab_set()
+        
+        # Parse slot info
+        session = values[1]
+        time = values[2]
+        
+        # Extract date from parent text: "📅 Lundi 13/05/2025" -> need to get YYYY-MM-DD format
+        slot_key = None
+        
+        # Try to find the slot key by matching session and date in parent text
+        for sk in self.best.keys():
+            parts = sk.split()
+            if len(parts) >= 2:
+                sk_date = parts[0]  # YYYY-MM-DD format
+                sk_session = parts[1].lower()
+                
+                # Check if session matches
+                if sk_session == session.lower():
+                    # Convert sk_date to DD/MM/YYYY to compare with parent_date_text
+                    try:
+                        from datetime import datetime
+                        date_obj = datetime.strptime(sk_date, '%Y-%m-%d')
+                        formatted_date = date_obj.strftime('%d/%m/%Y')
+                        
+                        # Check if this date appears in the parent text
+                        if formatted_date in parent_date_text:
+                            slot_key = sk
+                            break
+                    except:
+                        continue
+        
+        # Header
+        header = ctk.CTkFrame(editor_window, fg_color="#1976D2", corner_radius=10)
+        header.pack(fill="x", padx=20, pady=20)
+        
+        # Display the slot key for clarity
+        display_text = f"📅 {slot_key if slot_key else 'Session inconnue'}"
+        
+        ctk.CTkLabel(header, 
+                    text=display_text,
+                    font=ctk.CTkFont(size=18, weight="bold"),
+                    text_color="white").pack(pady=15)
+        
+        # Instructions
+        ctk.CTkLabel(editor_window,
+                    text="Gérez les enseignants de cette session",
+                    font=ctk.CTkFont(size=13)).pack(pady=10)
+        
+        # Teachers list frame
+        list_frame = ctk.CTkFrame(editor_window, fg_color="transparent")
+        list_frame.pack(fill="both", expand=True, padx=20, pady=(0, 10))
+        
+        # Scrollable frame for teachers
+        teachers_scroll = ctk.CTkScrollableFrame(list_frame, fg_color="transparent")
+        teachers_scroll.pack(fill="both", expand=True)
+        
+        # Check if we found the slot key
+        if not slot_key:
+            ctk.CTkLabel(teachers_scroll,
+                        text="❌ Erreur: Session non trouvée",
+                        font=ctk.CTkFont(size=14),
+                        text_color="red").pack(pady=50)
+            return
+        
+        if slot_key and slot_key in self.best:
+            teacher_codes = list(self.best[slot_key])
+            
+            if not teacher_codes:
+                ctk.CTkLabel(teachers_scroll,
+                            text="Aucun enseignant assigné",
+                            font=ctk.CTkFont(size=14),
+                            text_color="gray").pack(pady=50)
+            
+            # Display each teacher with delete and transfer buttons
+            for teacher_code in teacher_codes:
+                teacher_frame = ctk.CTkFrame(teachers_scroll, 
+                                            fg_color="#f0f0f0",
+                                            corner_radius=10,
+                                            border_width=2,
+                                            border_color="#e0e0e0")
+                teacher_frame.pack(fill="x", pady=8, padx=5)
+                
+                # Teacher info
+                teacher_code_str = str(teacher_code)
+                if teacher_code_str in self.teachers:
+                    teacher_info = self.teachers[teacher_code_str]
+                    nom = teacher_info.get('nom', '')
+                    prenom = teacher_info.get('prenom', '')
+                    grade = teacher_info.get('grade', '')
+                    display_text = f"#{teacher_code} - {prenom} {nom} ({grade})"
+                else:
+                    display_text = f"#{teacher_code}"
+                
+                # Left side - Teacher info
+                info_frame = ctk.CTkFrame(teacher_frame, fg_color="transparent")
+                info_frame.pack(side="left", fill="x", expand=True, padx=15, pady=12)
+                
+                ctk.CTkLabel(info_frame,
+                            text=display_text,
+                            font=ctk.CTkFont(size=13, weight="bold"),
+                            anchor="w").pack(side="left")
+                
+                # Right side - Action buttons
+                buttons_frame = ctk.CTkFrame(teacher_frame, fg_color="transparent")
+                buttons_frame.pack(side="right", padx=10, pady=8)
+                
+                # Transfer button
+                transfer_btn = ctk.CTkButton(buttons_frame,
+                                            text="↔️ Transférer",
+                                            width=120,
+                                            height=35,
+                                            fg_color="#3B82F6",
+                                            hover_color="#2563EB",
+                                            font=ctk.CTkFont(size=12, weight="bold"),
+                                            command=lambda tc=teacher_code, sk=slot_key, ew=editor_window: 
+                                                self.show_transfer_destinations(tc, sk, ew))
+                transfer_btn.pack(side="left", padx=5)
+                
+                # Delete button
+                delete_btn = ctk.CTkButton(buttons_frame,
+                                        text="🗑️ Supprimer",
+                                        width=120,
+                                        height=35,
+                                        fg_color="#EF4444",
+                                        hover_color="#DC2626",
+                                        font=ctk.CTkFont(size=12, weight="bold"),
+                                        command=lambda tc=teacher_code, sk=slot_key, ew=editor_window: 
+                                            self.remove_teacher_from_slot(tc, sk, ew))
+                delete_btn.pack(side="left", padx=5)
+        
+        # Bottom button frame
+        bottom_frame = ctk.CTkFrame(editor_window, fg_color="transparent")
+        bottom_frame.pack(fill="x", padx=20, pady=20)
+        
+        # Close button
+        close_btn = ctk.CTkButton(bottom_frame,
+                                text="✅ Fermer",
+                                command=editor_window.destroy,
+                                width=200,
+                                height=45,
+                                font=ctk.CTkFont(size=14, weight="bold"),
+                                fg_color="#10B981",
+                                hover_color="#059669")
+        close_btn.pack()
+    def show_transfer_destinations(self, teacher_code, source_slot, editor_window):
+        """Affiche la liste des sessions de destination pour transférer un enseignant"""
+        # Store teacher info for transfer
+        self.selected_teacher_for_transfer = {
+            'teacher_code': teacher_code,
+            'source_slot': source_slot
+        }
+        
+        # Create destination selection window
+        dest_window = ctk.CTkToplevel(self)
+        dest_window.title("↔️ Sélectionner la destination")
+        dest_window.geometry("700x600")
+        dest_window.transient(editor_window)
+        dest_window.grab_set()
+        
+        # Header
+        header = ctk.CTkFrame(dest_window, fg_color="#3B82F6", corner_radius=10)
+        header.pack(fill="x", padx=20, pady=20)
+        
+        teacher_code_str = str(teacher_code)
+        if teacher_code_str in self.teachers:
+            teacher_info = self.teachers[teacher_code_str]
+            teacher_name = f"{teacher_info.get('prenom', '')} {teacher_info.get('nom', '')}"
+        else:
+            teacher_name = f"Enseignant #{teacher_code}"
+        
+        ctk.CTkLabel(header,
+                    text=f"Transférer: {teacher_name}",
+                    font=ctk.CTkFont(size=16, weight="bold"),
+                    text_color="white").pack(pady=15)
+        
+        ctk.CTkLabel(dest_window,
+                    text="Sélectionnez la session de destination :",
+                    font=ctk.CTkFont(size=14, weight="bold")).pack(pady=(10, 20))
+        
+        # Scrollable frame for destinations
+        dest_scroll = ctk.CTkScrollableFrame(dest_window, fg_color="transparent")
+        dest_scroll.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+        
+        # Group slots by date
+        from collections import defaultdict
+        slots_by_date = defaultdict(list)
+        
+        for slot_key in sorted(self.best.keys()):
+            if slot_key != source_slot:  # Don't show source slot
+                try:
+                    parts = slot_key.split()
+                    date = parts[0]
+                    session = parts[1]
+                    slots_by_date[date].append((slot_key, session))
+                except:
+                    continue
+        
+        # Display slots grouped by date
+        for date in sorted(slots_by_date.keys()):
+            # Date header
+            date_frame = ctk.CTkFrame(dest_scroll, fg_color="#E5E7EB", corner_radius=8)
+            date_frame.pack(fill="x", pady=(10, 5))
+            
+            try:
+                from datetime import datetime
+                date_obj = datetime.strptime(date, '%Y-%m-%d')
+                day_names_fr = {
+                    'Monday': 'Lundi', 'Tuesday': 'Mardi', 'Wednesday': 'Mercredi',
+                    'Thursday': 'Jeudi', 'Friday': 'Vendredi', 'Saturday': 'Samedi', 'Sunday': 'Dimanche'
+                }
+                day_name = day_names_fr.get(date_obj.strftime('%A'), date_obj.strftime('%A'))
+                formatted_date = f"{day_name} {date_obj.strftime('%d/%m/%Y')}"
+            except:
+                formatted_date = date
+            
+            ctk.CTkLabel(date_frame,
+                        text=f"📅 {formatted_date}",
+                        font=ctk.CTkFont(size=13, weight="bold"),
+                        text_color="#374151").pack(pady=8, padx=15)
+            
+            # Sessions for this date
+            sessions_frame = ctk.CTkFrame(dest_scroll, fg_color="transparent")
+            sessions_frame.pack(fill="x", pady=(0, 5), padx=10)
+            
+            SESSION_TIMES = {'s1': '08:30', 's2': '10:45', 's3': '14:00', 's4': '16:15'}
+            
+            for slot_key, session in sorted(slots_by_date[date], key=lambda x: x[1]):
+                session_btn = ctk.CTkButton(
+                    sessions_frame,
+                    text=f"{session.upper()} - {SESSION_TIMES.get(session.lower(), '')} ({len(self.best[slot_key])} enseignants)",
+                    command=lambda sk=slot_key, dw=dest_window, ew=editor_window: 
+                        self.transfer_teacher(sk, dw, ew),
+                    height=40,
+                    font=ctk.CTkFont(size=13),
+                    fg_color="#FFFFFF",
+                    text_color="#1F2937",
+                    hover_color="#F3F4F6",
+                    border_width=2,
+                    border_color="#D1D5DB"
+                )
+                session_btn.pack(fill="x", pady=3)
+        
+        # Cancel button at bottom
+        cancel_btn = ctk.CTkButton(dest_window,
+                                text="❌ Annuler",
+                                command=dest_window.destroy,
+                                width=200,
+                                height=45,
+                                font=ctk.CTkFont(size=14, weight="bold"),
+                                fg_color="#6B7280",
+                                hover_color="#4B5563")
+        cancel_btn.pack(pady=20)
+
+    def transfer_teacher(self, dest_slot, dest_window, editor_window):
+        """Transfère l'enseignant sélectionné vers la session de destination"""
+        if not self.selected_teacher_for_transfer:
+            return
+        
+        teacher_code = self.selected_teacher_for_transfer['teacher_code']
+        source_slot = self.selected_teacher_for_transfer['source_slot']
+        
+        if source_slot in self.best and dest_slot in self.best:
+            # Remove from source
+            if teacher_code in self.best[source_slot]:
+                self.best[source_slot].remove(teacher_code)
+                
+                # Add to destination
+                self.best[dest_slot].append(teacher_code)
+                
+                self.show_success_message("✅ Transfert réussi",
+                    f"Enseignant #{teacher_code} transféré vers {dest_slot}")
+                
+                # Refresh display
+                self.display_planning_result()
+                
+                # Close both windows
+                dest_window.destroy()
+                editor_window.destroy()
+            else:
+                self.show_error_message("❌ Erreur",
+                    "Enseignant non trouvé dans le créneau source")
+        
+        # Reset selection
+        self.selected_teacher_for_transfer = None
+    def find_slot_key(self, date, session):
+        """Trouve la clé du slot correspondant à une date et session"""
+        for slot_key in self.best.keys():
+            if date in slot_key and session in slot_key.lower():
+                return slot_key
+        return None
+
+    def remove_teacher_from_slot(self, teacher_code, slot_key, editor_window=None):
+        """Supprime un enseignant d'un créneau"""
+        if slot_key in self.best:
+            # Remove teacher from the slot
+            if teacher_code in self.best[slot_key]:
+                self.best[slot_key].remove(teacher_code)
+                
+                # Show success message
+                self.show_success_message("✅ Suppression réussie", 
+                    f"Enseignant #{teacher_code} supprimé du créneau")
+                
+                # Refresh the display
+                self.display_planning_result()
+                
+                # Close editor if open
+                if editor_window:
+                    editor_window.destroy()
+            else:
+                self.show_error_message("❌ Erreur", 
+                    "Enseignant non trouvé dans ce créneau")
+    def delete_selected_teacher(self):
+        """Supprime l'enseignant sélectionné via le menu contextuel"""
+        if not self.selected_teacher:
+            return
+        
+        # Parse the slot key
+        slot_key = self.selected_teacher['slot']
+        teachers_text = self.selected_teacher['teachers_text']
+        
+        # Create dialog to select which teacher to delete
+        delete_window = ctk.CTkToplevel(self)
+        delete_window.title("🗑️ Supprimer un enseignant")
+        delete_window.geometry("500x400")
+        delete_window.transient(self)
+        delete_window.grab_set()
+        
+        ctk.CTkLabel(delete_window,
+                    text="Sélectionnez l'enseignant à supprimer :",
+                    font=ctk.CTkFont(size=14, weight="bold")).pack(pady=20)
+        
+        # List of teachers
+        teachers_frame = ctk.CTkScrollableFrame(delete_window)
+        teachers_frame.pack(fill="both", expand=True, padx=20, pady=10)
+        
+        if slot_key in self.best:
+            for teacher_code in self.best[slot_key]:
+                teacher_code_str = str(teacher_code)
+                if teacher_code_str in self.teachers:
+                    teacher_info = self.teachers[teacher_code_str]
+                    display_text = f"#{teacher_code} - {teacher_info.get('prenom', '')} {teacher_info.get('nom', '')}"
+                else:
+                    display_text = f"#{teacher_code}"
+                
+                btn = ctk.CTkButton(teachers_frame,
+                                text=display_text,
+                                command=lambda tc=teacher_code: [
+                                    self.remove_teacher_from_slot(tc, slot_key),
+                                    delete_window.destroy()
+                                ])
+                btn.pack(fill="x", pady=5)
+
+    def show_move_dialog(self):
+        """Affiche le dialogue pour déplacer un enseignant vers une autre session"""
+        if not self.selected_teacher:
+            return
+        
+        # Create move dialog
+        move_window = ctk.CTkToplevel(self)
+        move_window.title("↔️ Déplacer un enseignant")
+        move_window.geometry("600x500")
+        move_window.transient(self)
+        move_window.grab_set()
+        
+        ctk.CTkLabel(move_window,
+                    text="Sélectionnez la session de destination :",
+                    font=ctk.CTkFont(size=14, weight="bold")).pack(pady=20)
+        
+        # List all available slots
+        slots_frame = ctk.CTkScrollableFrame(move_window)
+        slots_frame.pack(fill="both", expand=True, padx=20, pady=10)
+        
+        source_slot = self.selected_teacher['slot']
+        
+        for slot_key in sorted(self.best.keys()):
+            if slot_key != source_slot:  # Don't show source slot
+                slot_btn = ctk.CTkButton(slots_frame,
+                                        text=slot_key,
+                                        command=lambda sk=slot_key: 
+                                            self.select_teacher_and_move(source_slot, sk, move_window))
+                slot_btn.pack(fill="x", pady=5)
+
+    def select_teacher_and_move(self, source_slot, dest_slot, move_window):
+        """Sélectionne l'enseignant à déplacer et effectue le déplacement"""
+        move_window.destroy()
+        
+        # Create teacher selection dialog
+        select_window = ctk.CTkToplevel(self)
+        select_window.title("Sélectionner l'enseignant")
+        select_window.geometry("500x400")
+        select_window.transient(self)
+        select_window.grab_set()
+        
+        ctk.CTkLabel(select_window,
+                    text=f"Déplacer vers: {dest_slot}",
+                    font=ctk.CTkFont(size=12)).pack(pady=10)
+        
+        ctk.CTkLabel(select_window,
+                    text="Sélectionnez l'enseignant à déplacer :",
+                    font=ctk.CTkFont(size=14, weight="bold")).pack(pady=10)
+        
+        teachers_frame = ctk.CTkScrollableFrame(select_window)
+        teachers_frame.pack(fill="both", expand=True, padx=20, pady=10)
+        
+        if source_slot in self.best:
+            for teacher_code in self.best[source_slot]:
+                teacher_code_str = str(teacher_code)
+                if teacher_code_str in self.teachers:
+                    teacher_info = self.teachers[teacher_code_str]
+                    display_text = f"#{teacher_code} - {teacher_info.get('prenom', '')} {teacher_info.get('nom', '')}"
+                else:
+                    display_text = f"#{teacher_code}"
+                
+                btn = ctk.CTkButton(teachers_frame,
+                                text=display_text,
+                                command=lambda tc=teacher_code: [
+                                    self.move_teacher(tc, source_slot, dest_slot),
+                                    select_window.destroy()
+                                ])
+                btn.pack(fill="x", pady=5)
+
+    def move_teacher(self, teacher_code, source_slot, dest_slot):
+        """Déplace un enseignant d'un créneau à un autre"""
+        if source_slot in self.best and dest_slot in self.best:
+            # Remove from source
+            if teacher_code in self.best[source_slot]:
+                self.best[source_slot].remove(teacher_code)
+                
+                # Add to destination
+                self.best[dest_slot].append(teacher_code)
+                
+                self.show_success_message("✅ Succès",
+                    f"Enseignant #{teacher_code} déplacé vers {dest_slot}")
+                
+                # Refresh display
+                self.display_planning_result()
+            else:
+                self.show_error_message("❌ Erreur",
+                    "Enseignant non trouvé dans le créneau source")
 
     def show_by_teacher(self):
         """Vue par enseignant avec statistiques complètes"""
