@@ -6,6 +6,17 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 from PIL import Image, ImageTk
 
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.pdfgen import canvas
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from datetime import datetime
+import os
+
+
 from genetic_algorithm import (
     run_ga_optimized, fitness, is_valid_teacher, 
     SESSION_TIMES
@@ -13,6 +24,10 @@ from genetic_algorithm import (
 from view_methods import (
     show_by_teacher, show_by_day_calendar, show_by_room,
     show_planning_quality_with_prof_resp, show_prof_responsable_details, assign_teachers_to_rooms
+)
+
+from pdf_export import (
+    export_teachers_to_pdf,
 )
 
 # Configuration initiale des quotas par grade
@@ -368,7 +383,19 @@ class App(ctk.CTk):
             command=lambda: self.switch_view('room')
         )
         self.room_view_btn.pack(side='left', padx=5)
-        
+
+        export_btn = ctk.CTkButton(
+                view_buttons_frame,
+                text="📄 Exporter PDF",
+                width=140,
+                height=40,
+                corner_radius=10,
+                fg_color=self.colors['primary'],
+                hover_color=self.colors['hover'],
+                command=lambda: self.export_teachers_to_pdf()
+            )
+        export_btn.pack(side='left', padx=5)
+
         # Search inputs (right side) - only visible in certain views
         self.search_frame = ctk.CTkFrame(header_container, fg_color='transparent')
         self.search_frame.pack(side='right')
@@ -2464,6 +2491,182 @@ class App(ctk.CTk):
     #         self.show_by_room_wrapper()
     #     elif self.current_view == "quality":
     #         self.show_planning_quality_wrapper()
+    def export_teachers_to_pdf(self, output_folder="exports"):
+        """Exporte un PDF pour chaque enseignant avec ses créneaux"""
+        if not self.best:
+            self.show_error_message("❌ Erreur", "Veuillez générer le planning d'abord!")
+            return
+        
+        # Create output folder if it doesn't exist
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
+        
+        # Organize assignments by teacher
+        from collections import defaultdict
+        teacher_slots = defaultdict(list)
+        
+        for slot in self.best:
+            for teacher in self.best[slot]:
+                teacher_slots[teacher].append(slot)
+        
+        # Session times mapping
+        SESSION_TIMES = {
+            's1': '08:30:00',
+            's2': '10:30:00',
+            's3': '10:30:00',  # Adjust based on your actual times
+            's4': '10:30:00'
+        }
+        
+        # Day names in French
+        DAY_NAMES_FR = {
+            'Monday': 'Lundi',
+            'Tuesday': 'Mardi',
+            'Wednesday': 'Mercredi',
+            'Thursday': 'Jeudi',
+            'Friday': 'Vendredi',
+            'Saturday': 'Samedi',
+            'Sunday': 'Dimanche'
+        }
+        
+        pdf_count = 0
+        
+        # Generate PDF for each assigned teacher
+        for teacher_code in sorted(teacher_slots.keys()):
+            if not teacher_slots[teacher_code]:
+                continue
+            
+            teacher_data = self.teachers.get(str(teacher_code), {})
+            prenom = teacher_data.get('prenom', '')
+            nom = teacher_data.get('nom', '')
+            full_name = f"Mr {prenom} {nom}" if prenom and nom else f"Enseignant #{teacher_code}"
+            
+            # Create PDF filename
+            safe_name = f"{prenom}_{nom}".replace(' ', '_') if prenom and nom else f"Teacher_{teacher_code}"
+            pdf_filename = os.path.join(output_folder, f"Affectation_{safe_name}.pdf")
+            
+            # Create PDF document
+            doc = SimpleDocTemplate(pdf_filename, pagesize=A4,
+                                rightMargin=2*cm, leftMargin=2*cm,
+                                topMargin=2*cm, bottomMargin=2*cm)
+            
+            elements = []
+            styles = getSampleStyleSheet()
+            
+            # Custom styles
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontSize=16,
+                textColor=colors.HexColor('#1e3a8a'),
+                spaceAfter=30,
+                alignment=TA_CENTER,
+                fontName='Helvetica-Bold'
+            )
+            
+            subtitle_style = ParagraphStyle(
+                'CustomSubtitle',
+                parent=styles['Normal'],
+                fontSize=14,
+                textColor=colors.HexColor('#1e3a8a'),
+                spaceAfter=20,
+                alignment=TA_CENTER,
+                fontName='Helvetica-Bold'
+            )
+            
+            normal_style = ParagraphStyle(
+                'CustomNormal',
+                parent=styles['Normal'],
+                fontSize=11,
+                spaceAfter=20,
+                alignment=TA_LEFT
+            )
+            
+            # Header section (mimicking the document)
+            header_data = [
+                ['GESTION DES EXAMENS ET\nDÉLIBÉRATIONS', 'EXD-FR-08-01'],
+                ["Procédure d'exécution des épreuves", f"Date d'approbation\n{datetime.now().strftime('%d-%m-%y')}"],
+                ["Liste d'affectation des surveillants", 'Page 1/1']
+            ]
+            
+            header_table = Table(header_data, colWidths=[14*cm, 4*cm])
+            header_table.setStyle(TableStyle([
+                ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#1e3a8a')),
+                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#e6f0ff')),
+                ('FONT', (0, 0), (-1, -1), 'Helvetica-Bold', 11),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#1e3a8a')),
+                ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.white, colors.HexColor('#f0f4ff')])
+            ]))
+            
+            elements.append(header_table)
+            elements.append(Spacer(1, 1*cm))
+            
+            # "Notes à" section
+            elements.append(Paragraph("Notes à", subtitle_style))
+            elements.append(Spacer(1, 0.3*cm))
+            
+            # Teacher name
+            elements.append(Paragraph(f"<b>{full_name}</b>", subtitle_style))
+            elements.append(Spacer(1, 0.5*cm))
+            
+            # Greeting text
+            greeting = """Cher (e) Collègue,<br/>
+            Vous êtes prié (e) d'assurer la surveillance et (ou) la responsabilité des examens selon le calendrier ci-joint."""
+            elements.append(Paragraph(greeting, normal_style))
+            elements.append(Spacer(1, 0.5*cm))
+            
+            # Prepare schedule data
+            schedule_data = [['Date', 'Heure', 'Durée']]
+            
+            for slot in sorted(teacher_slots[teacher_code]):
+                try:
+                    parts = slot.split()
+                    date_str = parts[0]
+                    session = parts[1].lower()
+                    
+                    # Format date
+                    date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                    formatted_date = date_obj.strftime('%Y-%m-%d')
+                    
+                    # Get time
+                    time = SESSION_TIMES.get(session, '08:30:00')
+                    
+                    # Duration (default 1.5H)
+                    duration = '1.5 H'
+                    
+                    schedule_data.append([formatted_date, time, duration])
+                except:
+                    schedule_data.append([slot, 'N/A', '1.5 H'])
+            
+            # Create schedule table
+            schedule_table = Table(schedule_data, colWidths=[6*cm, 6*cm, 6*cm])
+            schedule_table.setStyle(TableStyle([
+                # Header row
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e3a8a')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 12),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                # Data rows
+                ('FONT', (0, 1), (-1, -1), 'Helvetica', 11),
+                ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#1e3a8a')),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#e6f0ff'), colors.white])
+            ]))
+            
+            elements.append(schedule_table)
+            
+            # Build PDF
+            doc.build(elements)
+            pdf_count += 1
+        
+        # Show success message
+        self.show_success_message(
+            "✅ Export Réussi", 
+            f"{pdf_count} PDF(s) générés dans le dossier '{output_folder}'"
+        )
+        
+        return pdf_count
 
     def export_csv(self):
         if not self.best:
