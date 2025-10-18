@@ -83,6 +83,7 @@ class App(ctk.CTk):
             'primary': '#2563EB',
             'primary_hover': '#1D4ED8',
             'success': '#10B981',
+            'success_light':"#5AE6B7",
             'warning': '#F59E0B',
             'error': '#EF4444',
             'bg': '#E4E4E4',
@@ -90,6 +91,7 @@ class App(ctk.CTk):
             'sidebar': '#F8FAFC',
             'text': '#1F2937',
             'text_secondary': '#6B7280',
+            'text_secondary_light': "#ACACAC",
             'border': '#E5E7EB',
             'hover': '#F3F4F6',
             'test': "#E2E2E2",
@@ -505,6 +507,49 @@ class App(ctk.CTk):
                     text="Système de planification des examens",
                     font=("Segoe UI", 13),
                     text_color=self.colors['text_secondary']).pack(anchor='w')
+            # Action buttons (RIGHT)
+        buttons_container = ctk.CTkFrame(header, fg_color='transparent')
+        buttons_container.pack(side='right', padx=30, pady=20)
+        
+        # Export individual PDF button
+        export_btn = ctk.CTkButton(
+            buttons_container,
+            text="📄 Export Individuel",
+            width=150,
+            height=40,
+            corner_radius=10,
+            fg_color=self.colors['text_secondary'],
+            hover_color=self.colors['text_secondary_light'],
+            command=lambda: self.export_teachers_to_pdf()
+        )
+        export_btn.pack(side='left', padx=5)
+        
+        # Export general PDF button
+        export_general_btn = ctk.CTkButton(
+            buttons_container,
+            text="📄 Export Général",
+            width=150,
+            height=40,
+            corner_radius=10,
+            fg_color=self.colors['text_secondary'],  
+            hover_color=self.colors['text_secondary_light'],
+            command=lambda: self.export_general_pdf()
+        )
+        export_general_btn.pack(side='left', padx=5)
+        self.quality_btn = ctk.CTkButton(
+            buttons_container,
+            text="Qualité Planning",
+            width=150,
+            height=40,
+            corner_radius=10,
+            text_color="black",
+            fg_color=self.colors['success'] if self.current_view == 'quality' else 'transparent',
+            hover_color=self.colors['hover'],
+            border_width=2,
+            border_color=self.colors['success'],
+            command=lambda: self.switch_view('quality')
+        )
+        self.quality_btn.pack(side='left', padx=5)
     def create_sidebar(self, parent):
         sidebar = ctk.CTkFrame(parent, fg_color=self.colors['card'],
                               corner_radius=16, width=320)
@@ -723,30 +768,10 @@ class App(ctk.CTk):
         )
         self.room_view_btn.pack(side='left', padx=5)
 
-        export_btn = ctk.CTkButton(
-                view_buttons_frame,
-                text="📄 Exporter PDF",
-                width=140,
-                height=40,
-                corner_radius=10,
-                fg_color=self.colors['primary'],
-                hover_color=self.colors['hover'],
-                command=lambda: self.export_teachers_to_pdf()
-            )
-        export_btn.pack(side='left', padx=5)
+       
 
-        export_general_btn = ctk.CTkButton(
-            view_buttons_frame,
-            text="📄 Export Général PDF",
-            width=160,
-            height=40,
-            corner_radius=10,
-            fg_color=self.colors['success'],  
-            hover_color=self.colors['hover'],
-            command=lambda: self.export_general_pdf()
-        )
-        export_general_btn.pack(side='right', padx=5)
-
+            #     tk.Button(btn_frame2, text="Qualite Planning", command=self.show_planning_quality_wrapper,
+    #              bg="#E91E63", fg="white", width=18).pack(side=tk.LEFT, padx=2)
         # Search inputs (right side) - only visible in certain views
         self.search_frame = ctk.CTkFrame(header_container, fg_color='transparent')
         self.search_frame.pack(side='right')
@@ -877,7 +902,9 @@ class App(ctk.CTk):
         self.room_view_btn.configure(
             fg_color=self.colors['primary'] if view_type == 'room' else 'transparent'
         )
-        
+        self.quality_btn.configure(
+            fg_color=self.colors['success'] if view_type == 'quality' else 'transparent'
+        )
         # Update search field visibility
         self.update_search_visibility()
         
@@ -894,6 +921,9 @@ class App(ctk.CTk):
             self.show_by_teacher()
         elif view_type == 'room':
             self.show_by_room()
+        elif view_type == 'quality':
+            show_planning_quality_with_prof_resp(self)
+    
 
     def update_search_visibility(self):
         """Show/hide search fields based on current view"""
@@ -914,6 +944,10 @@ class App(ctk.CTk):
             self.teacher_search.pack(side='left', padx=5)
             self.day_search.pack_forget()
             self.room_search.pack(side='left', padx=5)
+        elif self.current_view == "quality":
+            self.day_search.pack_forget()
+            self.room_search.pack_forget()
+            self.teacher_search.pack_forget()
     def filter_by_teacher(self):
         """Filter the current view by teacher name/code"""
         search_term = self.teacher_search.get().lower().strip()
@@ -1275,7 +1309,9 @@ class App(ctk.CTk):
             self.day_to_date = {str(i+1): d.strftime('%Y-%m-%d') for i, d in enumerate(unique_dates)}
             self.data_loaded['slots'] = True
             self.update_button_status('slots', "Charger Créneaux", "📊")
-            self.show_success_message("✅ Succès", f"{len(self.slots)} créneaux chargés avec succès!")
+            self.show_success_message("✅ Succès",f"Fichier charge avec succès!\n\n"
+                f"Total lignes : {total_repartitions}\n"
+                f"Créneaux : {len(self.slots)}","400x300")
 
         except Exception as e:
             self.show_error_message("❌ Erreur", f"Erreur lors du chargement des créneaux:\n{str(e)}")
@@ -1321,11 +1357,12 @@ class App(ctk.CTk):
            
             # Compter les enseignants participant à la surveillance
             participating = sum(1 for t in self.teachers.values() if t['participe_surveillance'])
-            messagebox.showinfo("Succès",
-                              f"{len(self.teachers)} enseignants chargés\n"
-                              f"{participating} participent à la surveillance")
+            self.data_loaded['teachers'] = True
+            self.update_button_status('teachers', "Charger Enseignants", "👥")
+            self.show_success_message("✅ Succès", 
+                f"{len(self.teachers)} enseignants chargés\n({participating} participent à la surveillance)")
         except Exception as e:
-            messagebox.showerror("Erreur", f"Erreur:\n{str(e)}")
+            self.show_error_message("❌ Erreur", f"Erreur lors du chargement des enseignants:\n{str(e)}")
 
     def load_wishes(self):
       file = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx *.xls")])
@@ -1376,11 +1413,15 @@ class App(ctk.CTk):
                                 loaded_count += 1
                         affected_abrvs.add(ens_abrv)
            
-            messagebox.showinfo("Succes",
-                              f"{loaded_count} voeux chargés pour {len(affected_abrvs)} enseignants\n"
-                              f"Priorités appliquées (premiers arrivés mieux protégés)")
+            # messagebox.showinfo("Succes",
+            #                   f"{loaded_count} voeux chargés pour {len(affected_abrvs)} enseignants\n"
+            #                   f"Priorités appliquées (premiers arrivés mieux protégés)")
+            self.data_loaded['wishes'] = True
+            self.update_button_status('wishes', "Charger Voeux", "💭")
+            self.show_success_message("✅ Succès", 
+                    f"Voeux chargés: {loaded_count} indisponibilités\npour {len(affected_abrvs)} enseignants")
         except Exception as e:
-            messagebox.showerror("Erreur", f"Erreur:\n{str(e)}")
+            self.show_error_message("❌ Erreur", f"Erreur lors du chargement des voeux:\n{str(e)}")
 
     def configure_quotas(self):
         """Ouvre la fenêtre de configuration des quotas"""
@@ -3289,11 +3330,11 @@ class App(ctk.CTk):
 
     # ========== HELPER METHODS ==========
     
-    def show_success_message(self, title, message):
+    def show_success_message(self, title, message,window_size="400x200"):
         """Show modern success message"""
         msg_window = ctk.CTkToplevel(self)
         msg_window.title(title)
-        msg_window.geometry("400x200")
+        msg_window.geometry(window_size)
         msg_window.configure(fg_color=self.colors['bg'])
         msg_window.transient(self)
         msg_window.grab_set()
