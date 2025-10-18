@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # Teacher Supervision Schedule Management Application
 
 ## Description
