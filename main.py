@@ -1,3 +1,4 @@
+
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import customtkinter as ctk
@@ -5,6 +6,9 @@ import pandas as pd
 from datetime import datetime, timedelta
 from collections import defaultdict
 from PIL import Image, ImageTk
+import sqlite3
+import json
+from datetime import datetime
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
@@ -66,6 +70,9 @@ class App(ctk.CTk):
         self.title("Gestion des Creneaux de Surveillance - Version Optimisee")
         self.geometry("1500x950")
         self.configure(fg_color="#FAFAFA")
+        # Initialiser la base de données
+        self.setup_database()
+
 
         # Thème moderne
         ctk.set_appearance_mode("light")
@@ -117,8 +124,329 @@ class App(ctk.CTk):
         self.current_filter = ""
         self.data_buttons = {}
         self.create_modern_ui()
+    
+    def setup_database(self):
+        """Initialise la base de données SQLite"""
+        self.conn = sqlite3.connect('planning_history.db')
+        self.cursor = self.conn.cursor()
+        
+        # Créer la table si elle n'existe pas
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS planning_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                planning_data TEXT NOT NULL,
+                
+                
+                teacher_count INTEGER,
+                slot_count INTEGER,
+                
+                notes TEXT
+            )
+        ''')
+        self.conn.commit()
+    
+    def save_planning_to_history(self, notes=""):
+        """Sauvegarde le planning actuel dans l'historique"""
+        if not self.best:
+            self.show_error_message("❌ Erreur", "Aucun planning à sauvegarder!")
+            return False
+        
+        try:
+            # Préparer les données pour la sauvegarde
+            planning_data = {
+                'best': self.best,
+                'teachers': self.teachers,
+                'slots': self.slots,
+                'room_assignments': self.room_assignments,
+                'prof_resp_list': self.prof_resp_list
+            }
+            
+            # Calculer les statistiques
+            #fitness_score = self.best_fitness_history[-1] if self.best_fitness_history else 0
+            #generation_count = len(self.best_fitness_history)
+            teacher_count = len(set().union(*self.best.values()))
+            slot_count = len(self.best)
+            
+            # Compter les violations de contraintes (exemple simplifié)
+            #constraints_violated = self.count_constraint_violations()
+            
+            # Insérer dans la base de données
+            self.cursor.execute('''
+                INSERT INTO planning_history 
+                (timestamp, planning_data, teacher_count, slot_count, notes)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (
+                datetime.now().isoformat(),
+                json.dumps(planning_data),
+                #fitness_score,
+                #generation_count,
+                teacher_count,
+                slot_count,
+                #constraints_violated,
+                notes
+            ))
+            
+            self.conn.commit()
+            
+            history_id = self.cursor.lastrowid
+            self.show_success_message("✅ Sauvegarde réussie", 
+                f"Planning sauvegardé dans l'historique (ID: {history_id})")
+            return True
+            
+        except Exception as e:
+            self.show_error_message("❌ Erreur", f"Erreur lors de la sauvegarde:\n{str(e)}")
+            return False
+    def count_constraint_violations(self):
+        """Compte le nombre de violations de contraintes"""
+        violations = 0
+        
+        if not self.best:
+            return violations
+        
+        # Vérifier les quotas
+        teacher_assignments = {}
+        for slot in self.best:
+            for teacher in self.best[slot]:
+                if teacher not in teacher_assignments:
+                    teacher_assignments[teacher] = 0
+                teacher_assignments[teacher] += 1
+        
+        for teacher, count in teacher_assignments.items():
+            if teacher in self.teachers and count > self.teachers[teacher]['quota']:
+                violations += 1
+        
+        # Vérifier les salles surchargées
+        for slot in self.room_assignments:
+            for room, teachers in self.room_assignments[slot].items():
+                if len(teachers) > 4:  # Maximum 4 profs par salle
+                    violations += 1
+                if len(teachers) < 2:  # Minimum 2 profs par salle
+                    violations += 1
+        
+        return violations
+    
 
+    def show_history(self):
+        """Affiche l'historique des plannings"""
+        try:
+            self.cursor.execute('''
+                SELECT id, timestamp, teacher_count, 
+                    slot_count, notes
+                FROM planning_history 
+                ORDER BY timestamp DESC
+            ''')
+            
+            history_records = self.cursor.fetchall()
+            
+            if not history_records:
+                self.show_error_message("📊 Historique vide", 
+                    "Aucun planning sauvegardé dans l'historique.\nGénérez et sauvegardez d'abord un planning.")
+                return
+            
+            # Créer une fenêtre pour afficher l'historique
+            history_window = ctk.CTkToplevel(self)
+            history_window.title("📊 Historique des Plannings")
+            history_window.geometry("1000x700")
+            history_window.configure(fg_color=self.colors['bg'])
+            
+            # Header
+            header = ctk.CTkFrame(history_window, fg_color=self.colors['card'],
+                                corner_radius=16, height=80)
+            header.pack(fill='x', padx=20, pady=20)
+            header.pack_propagate(False)
+            
+            ctk.CTkLabel(header, 
+                        text="📊 Historique des Plannings Générés",
+                        font=("Segoe UI", 20, "bold"),
+                        text_color=self.colors['text']).pack(pady=25)
+            
+            # Treeview pour l'historique
+            tree_frame = ctk.CTkFrame(history_window, fg_color='transparent')
+            tree_frame.pack(fill='both', expand=True, padx=20, pady=(0, 20))
+            
+            # Scrollbars
+            tree_scroll_y = ctk.CTkScrollbar(tree_frame)
+            tree_scroll_y.pack(side='right', fill='y')
+            
+            tree_scroll_x = ctk.CTkScrollbar(tree_frame, orientation='horizontal')
+            tree_scroll_x.pack(side='bottom', fill='x')
+            
+            # Configuration du treeview
+            history_tree = ttk.Treeview(
+                tree_frame,
+                columns=("ID", "Date", "Enseignants", "Créneaux", "Notes"),
+                show="headings",
+                yscrollcommand=tree_scroll_y.set,
+                xscrollcommand=tree_scroll_x.set,
+                height=15
+            )
+            
+            history_tree.pack(fill='both', expand=True)
+            
+            tree_scroll_y.configure(command=history_tree.yview)
+            tree_scroll_x.configure(command=history_tree.xview)
+            
+            # Configurer les colonnes
+            columns_config = [
+                ("ID", 60, "center"),
+                ("Date", 150, "center"),
+                ("Enseignants", 100, "center"),
+                ("Créneaux", 100, "center"),
+                ("Notes", 300, "w")
+            ]
+            
+            for col, width, anchor in columns_config:
+                history_tree.heading(col, text=col)
+                history_tree.column(col, width=width, anchor=anchor)
+            
+            # Remplir avec les données - SUPPRIMER TOUTE RÉFÉRENCE AUX VIOLATIONS
+            for record in history_records:
+                (id, timestamp, teacher_count, slot_count, notes) = record
+                
+                # Formater la date
+                date_obj = datetime.fromisoformat(timestamp)
+                formatted_date = date_obj.strftime("%d/%m/%Y %H:%M")
+                
+                # INSÉRER SIMPLEMENT LES DONNÉES SANS CALCUL DE VIOLATIONS
+                history_tree.insert("", "end", values=(
+                    id, formatted_date, teacher_count, slot_count, notes or ""
+                ))
+            
+            # SUPPRIMER LES TAGS DE COULEUR PUISQU'ON N'A PLUS LES VIOLATIONS
+            # history_tree.tag_configure("optimal", background="#D1FAE5")
+            # history_tree.tag_configure("acceptable", background="#FEF3C7")
+            # history_tree.tag_configure("problem", background="#FEE2E2")
+            
+            # Frame pour les boutons d'action
+            button_frame = ctk.CTkFrame(history_window, fg_color='transparent')
+            button_frame.pack(fill='x', padx=20, pady=(0, 20))
+            
+            ctk.CTkButton(button_frame, text="📋 Charger ce planning",
+                        font=("Segoe UI", 13, "bold"),
+                        fg_color=self.colors['primary'],
+                        hover_color=self.colors['primary_hover'],
+                        height=45,
+                        command=lambda: self.load_selected_planning(history_tree),
+                        width=200).pack(side='left', padx=(0, 10))
+            
+            ctk.CTkButton(button_frame, text="🗑️ Supprimer",
+                        font=("Segoe UI", 13),
+                        fg_color=self.colors['error'],
+                        hover_color=self.adjust_color(self.colors['error'], -20),
+                        height=45,
+                        command=lambda: self.delete_selected_history(history_tree),
+                        width=120).pack(side='left', padx=(0, 10))
+            
+            ctk.CTkButton(button_frame, text="💾 Sauvegarder le planning actuel",
+                        font=("Segoe UI", 13),
+                        fg_color=self.colors['success'],
+                        hover_color=self.adjust_color(self.colors['success'], -20),
+                        height=45,
+                        command=self.prompt_save_current_planning,
+                        width=250).pack(side='left')
+            
+            ctk.CTkButton(button_frame, text="❌ Fermer",
+                        font=("Segoe UI", 13),
+                        fg_color=self.colors['hover'],
+                        hover_color=self.colors['border'],
+                        text_color=self.colors['text'],
+                        height=45,
+                        command=history_window.destroy,
+                        width=120).pack(side='right')
+            
+        except Exception as e:
+            self.show_error_message("❌ Erreur", f"Erreur lors du chargement de l'historique:\n{str(e)}")
+    
+    def prompt_save_current_planning(self):
+        """Demande à l'utilisateur de sauvegarder le planning actuel"""
+        if not self.best:
+            self.show_error_message("❌ Erreur", "Aucun planning à sauvegarder!")
+            return
+        
+        # Créer une fenêtre de dialogue pour les notes
+        save_window = ctk.CTkToplevel(self)
+        save_window.title("💾 Sauvegarder le planning")
+        save_window.geometry("500x300")
+        save_window.transient(self)
+        save_window.grab_set()
+        
+        ctk.CTkLabel(save_window,
+                    text="Ajouter une note pour ce planning:",
+                    font=("Segoe UI", 16, "bold")).pack(pady=20)
+        
+        notes_entry = ctk.CTkTextbox(save_window, width=400, height=100)
+        notes_entry.pack(pady=10)
+        notes_entry.insert("1.0", f"Planning généré le {datetime.now().strftime('%d/%m/%Y')}")
+        
+        def save_with_notes():
+            notes = notes_entry.get("1.0", "end-1c").strip()
+            self.save_planning_to_history(notes)
+            save_window.destroy()
+        
+        ctk.CTkButton(save_window, text="💾 Sauvegarder",
+                    font=("Segoe UI", 14, "bold"),
+                    fg_color=self.colors['success'],
+                    hover_color=self.adjust_color(self.colors['success'], -20),
+                    height=45,
+                    command=save_with_notes,
+                    width=200).pack(pady=20)
+        
+    def load_selected_planning(self, history_tree):
+        """Charge le planning sélectionné depuis l'historique"""
+        selected = history_tree.selection()
+        if not selected:
+            self.show_error_message("❌ Erreur", "Veuillez sélectionner un planning dans l'historique")
+            return
+        
+        item = selected[0]
+        planning_id = history_tree.item(item, "values")[0]
+        
+        try:
+            self.cursor.execute('SELECT planning_data FROM planning_history WHERE id = ?', (planning_id,))
+            result = self.cursor.fetchone()
+            
+            if not result:
+                self.show_error_message("❌ Erreur", "Planning non trouvé dans la base de données")
+                return
+            
+            # Charger les données
+            planning_data = json.loads(result[0])
+            
+            # Restaurer l'état de l'application
+            self.best = planning_data['best']
+            self.teachers = planning_data['teachers']
+            self.slots = planning_data['slots']
+            self.room_assignments = planning_data['room_assignments']
+            self.prof_resp_list = planning_data['prof_resp_list']
+            
+            # Afficher le planning chargé
+            self.display_planning_result()
+            
+            self.show_success_message("✅ Chargement réussi", 
+                f"Planning chargé depuis l'historique (ID: {planning_id})")
+            
+        except Exception as e:
+            self.show_error_message("❌ Erreur", f"Erreur lors du chargement:\n{str(e)}")
 
+    def delete_selected_history(self, history_tree):
+        """Supprime l'entrée sélectionnée de l'historique"""
+        selected = history_tree.selection()
+        if not selected:
+            self.show_error_message("❌ Erreur", "Veuillez sélectionner un planning à supprimer")
+            return
+        
+        item = selected[0]
+        planning_id = history_tree.item(item, "values")[0]
+        
+        if messagebox.askyesno("Confirmation", f"Voulez-vous vraiment supprimer le planning #{planning_id} ?"):
+            try:
+                self.cursor.execute('DELETE FROM planning_history WHERE id = ?', (planning_id,))
+                self.conn.commit()
+                history_tree.delete(item)
+                self.show_success_message("✅ Suppression réussie", f"Planning #{planning_id} supprimé")
+            except Exception as e:
+                self.show_error_message("❌ Erreur", f"Erreur lors de la suppression:\n{str(e)}")
     def create_modern_ui(self):
         # Main container with subtle shadow effect
         main_container = ctk.CTkFrame(self, fg_color='transparent')
@@ -216,11 +544,22 @@ class App(ctk.CTk):
             self.generate_planning, self.colors['success'], large=True
         )
         # Section: Génération
+        #self.create_section(sidebar, "🧬 Historique du Planning", 0)
+
+        #self.create_modern_button(
+           # sidebar, "Voir Historique", "▶️",
+           # self.generate_planning, self.colors['success'], large=True
+        #)
+        # Section: Historique
         self.create_section(sidebar, "🧬 Historique du Planning", 0)
 
         self.create_modern_button(
             sidebar, "Voir Historique", "▶️",
-            self.generate_planning, self.colors['success'], large=True
+            self.show_history, self.colors['text_secondary'], large=True
+        )
+        self.create_modern_button(
+        sidebar, "Sauvegarder Historique", "💾", 
+        self.prompt_save_current_planning, self.colors['success'], large=False
         )
         # Divider
         ctk.CTkFrame(sidebar, height=1, fg_color=self.colors['border']).pack(
@@ -834,25 +1173,25 @@ class App(ctk.CTk):
         try:
             engine = 'openpyxl' if file.endswith('.xlsx') else 'xlrd'
             df = pd.read_excel(file, engine=engine)
-            
+           
             print(f"Colonnes disponibles: {df.columns.tolist()}")
-            
+           
             df['dateExam'] = pd.to_datetime(df['dateExam'], format='%d/%m/%Y', dayfirst=True)
             df['h_debut_time'] = df['h_debut'].str.extract(r'(\d{2}:\d{2}:\d{2})', expand=False)
             df['h_fin_time'] = df['h_fin'].str.extract(r'(\d{2}:\d{2}:\d{2})', expand=False)
-            
+           
             df['h_debut'] = pd.to_datetime(df['dateExam'].astype(str) + ' ' + df['h_debut_time'],
                                          format='%Y-%m-%d %H:%M:%S', errors='coerce')
             df['h_fin'] = pd.to_datetime(df['dateExam'].astype(str) + ' ' + df['h_fin_time'],
                                        format='%Y-%m-%d %H:%M:%S', errors='coerce')
-            
+           
             SESSION_TIMES_REV = {v: k for k, v in SESSION_TIMES.items()}
             df['session'] = df['h_debut'].dt.strftime('%H:%M').map(lambda x: SESSION_TIMES_REV.get(x, 'S1'))
             df['slot'] = df.apply(lambda row: f"{row['dateExam'].strftime('%Y-%m-%d')} {row['session']}", axis=1)
-            
+           
             # Remove duplicates based on slot and cod_salle, keeping the first occurrence
             df = df.drop_duplicates(subset=['slot', 'cod_salle'], keep='first')
-            
+           
             # Trouver la colonne prof responsable
             prof_col = None
             if 'smart_ens_code' in df.columns:
@@ -864,10 +1203,10 @@ class App(ctk.CTk):
                     if 'ens' in col.lower() or 'prof' in col.lower():
                         prof_col = col
                         break
-            
+           
             # Compter les repartitions APRES deduplication
             total_repartitions = len(df)
-            
+           
             # Collecter TOUTES les repartitions profs responsables (par ligne du fichier)
             self.prof_resp_list = []
             profs_responsables_count = 0
@@ -893,13 +1232,13 @@ class App(ctk.CTk):
                                 'session': row['session'],
                                 'jour': row['dateExam'].strftime('%a %d/%m/%Y')
                             })
-            
+           
             # CORRECT: Grouper par slot et conserver TOUTES les salles par slot
             self.slots = []
             self.room_names = {}
-            
+           
             grouped = df.groupby('slot')
-            
+           
             for slot, group in grouped:
                 # Recuperer le prof responsable (premier de la liste pour ce slot)
                 enseignant = ''
@@ -911,27 +1250,27 @@ class App(ctk.CTk):
                             enseignant = str(int(prof_val))
                         else:
                             enseignant = str(prof_val)
-                
+               
                 # IMPORTANT: Recuperer TOUTES les salles UNIQUES de ce slot
                 rooms = sorted(group['cod_salle'].unique().tolist())
                 room_count = len(rooms)
-                
+               
                 self.slots.append((slot, {
                     'room_count': room_count,
                     'enseignant': enseignant,
                     'session': group['session'].iloc[0],
                     'room_names': rooms  # TOUTES les salles
                 }))
-                
+               
                 # Stocker les noms de salles par slot
                 if slot not in self.room_names:
                     self.room_names[slot] = {}
                 for room in rooms:
                     self.room_names[slot][room] = room
-                
+               
                 # Initialiser room_assignments avec TOUTES les salles
                 self.room_assignments[slot] = {room: [] for room in rooms}
-            
+           
             unique_dates = sorted(df['dateExam'].unique())
             self.day_to_date = {str(i+1): d.strftime('%Y-%m-%d') for i, d in enumerate(unique_dates)}
             self.data_loaded['slots'] = True
@@ -942,85 +1281,106 @@ class App(ctk.CTk):
             self.show_error_message("❌ Erreur", f"Erreur lors du chargement des créneaux:\n{str(e)}")
 
 
-    
 
     def load_teachers(self):
-        file = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx *.xls")])
-        if file:
-            try:
-                engine = 'openpyxl' if file.endswith('.xlsx') else 'xlrd'
-                df = pd.read_excel(file, engine=engine)
-                
-                for _, row in df.iterrows():
-                    if pd.isna(row['code_smartex_ens']):
-                        continue
-                    code = str(int(row['code_smartex_ens']))
-                    participe = row['participe_surveillance'] in [1, '1', True, 'true', 'True']
-                    self.teachers[code] = {
-                        'nom': row.get('nom_ens', ''),
-                        'prenom': row.get('prenom_ens', ''),
-                        'abrv': row.get('abrv_ens', ''),
-                        'email': row.get('email_ens', '') if 'email_ens' in row else '',
-                        'grade': row['grade_code_ens'],
-                        'quota': GRADE_QUOTAS.get(row['grade_code_ens'], 2),
-                        'indispo': [],
-                        'wish_priority': {},
-                        'participe_surveillance': participe
-                    }
-                
-                participating = sum(1 for t in self.teachers.values() if t['participe_surveillance'])
-                self.data_loaded['teachers'] = True
-                self.update_button_status('teachers', "Charger Enseignants", "👥")
-                self.show_success_message("✅ Succès", 
-                    f"{len(self.teachers)} enseignants chargés\n({participating} participent à la surveillance)")
-            except Exception as e:
-                self.show_error_message("❌ Erreur", f"Erreur lors du chargement des enseignants:\n{str(e)}")
+      file = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx *.xls")])
+      if file:
+        try:
+            engine = 'openpyxl' if file.endswith('.xlsx') else 'xlrd'
+            df = pd.read_excel(file, engine=engine)
+           
+            self.teachers = {}  # Réinitialiser le dictionnaire
+            counter = 0  # Compteur pour gérer les emails manquants ou dupliqués
+           
+            for index, row in df.iterrows():
+                # Vérifier la participation à la surveillance
+                participe = row.get('participe_surveillance', False) in [1, '1', True, 'true', 'True']
+               
+                # Utiliser l'email comme clé, avec un mécanisme de secours
+                email = row.get('email_ens', '')
+                if not email or email in self.teachers:
+                    # Si email manquant ou déjà utilisé, générer une clé unique
+                    code = f"TEACHER_{index}_{counter}"
+                    counter += 1
+                else:
+                    code = email
+               
+                # Ajouter l'enseignant au dictionnaire
+                self.teachers[code] = {
+                    'nom': row.get('nom_ens', ''),
+                    'prenom': row.get('prenom_ens', ''),
+                    'abrv': row.get('abrv_ens', ''),
+                    'email': email,
+                    'grade': row.get('grade_code_ens', ''),
+                    'quota': GRADE_QUOTAS.get(row.get('grade_code_ens', ''), 2),
+                    'indispo': [],
+                    'wish_priority': {},
+                    'participe_surveillance': participe,
+                    'code_smartex_ens': str(int(row['code_smartex_ens'])) if 'code_smartex_ens' in row and not pd.isna(row['code_smartex_ens']) else ''
+                }
+           
+            # Compter les enseignants participant à la surveillance
+            participating = sum(1 for t in self.teachers.values() if t['participe_surveillance'])
+            messagebox.showinfo("Succès",
+                              f"{len(self.teachers)} enseignants chargés\n"
+                              f"{participating} participent à la surveillance")
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Erreur:\n{str(e)}")
 
     def load_wishes(self):
-        file = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx *.xls")])
-        if file:
-            if not self.day_to_date:
-                messagebox.showerror("Erreur", "Chargez d'abord les créneaux!")
-                return
-            try:
-                engine = 'openpyxl' if file.endswith('.xlsx') else 'xlrd'
-                df = pd.read_excel(file, engine=engine)
-                
-                if 'ordre_arrivee' in df.columns or 'timestamp' in df.columns:
-                    sort_col = 'ordre_arrivee' if 'ordre_arrivee' in df.columns else 'timestamp'
-                    df = df.sort_values(sort_col)
-                
-                loaded_count = 0
-                
-                for idx, row in df.iterrows():
-                    if pd.isna(row['code_smartex_ens']):
-                        continue
-                    ens = str(int(row['code_smartex_ens']))
-                    if ens in self.teachers:
-                        if 'wish_priority' not in self.teachers[ens]:
-                            self.teachers[ens]['wish_priority'] = {}
-                        
-                        jour_str = str(int(row['jour'])) if pd.notna(row['jour']) else None
-                        seance = str(row['seance']).strip() if pd.notna(row['seance']) else None
-                        if jour_str and seance:
-                            date = self.day_to_date.get(jour_str)
-                            if date:
-                                slot = f"{date} {seance}"
-                                if slot not in self.teachers[ens]['indispo']:
-                                    self.teachers[ens]['indispo'].append(slot)
-                                    priority = 2.0 - (idx / max(len(df), 1))
-                                    self.teachers[ens]['wish_priority'][slot] = priority
-                                    loaded_count += 1
-                
-                affected = len(set(str(int(row['code_smartex_ens'])) for _, row in df.iterrows()
-                                if pd.notna(row['code_smartex_ens']) and str(int(row['code_smartex_ens'])) in self.teachers))
-
-                self.data_loaded['wishes'] = True
-                self.update_button_status('wishes', "Charger Vœux", "💭")
-                self.show_success_message("✅ Succès", 
-                    f"Vœux chargés: {loaded_count} indisponibilités\npour {affected} enseignants")
-            except Exception as e:
-                self.show_error_message("❌ Erreur", f"Erreur lors du chargement des vœux:\n{str(e)}")
+      file = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx *.xls")])
+      if file:
+        if not self.day_to_date:
+            messagebox.showerror("Erreur", "Chargez d'abord les créneaux!")
+            return
+        try:
+            engine = 'openpyxl' if file.endswith('.xlsx') else 'xlrd'
+            df = pd.read_excel(file, engine=engine)
+           
+            if 'ordre_arrivee' in df.columns or 'timestamp' in df.columns:
+                sort_col = 'ordre_arrivee' if 'ordre_arrivee' in df.columns else 'timestamp'
+                df = df.sort_values(sort_col)
+           
+            loaded_count = 0
+            affected_abrvs = set()
+           
+            for idx, row in df.iterrows():
+                ens_abrv = str(row.get('Enseignant', '')).strip()
+                if not ens_abrv:
+                    continue
+               
+                # Trouver la clé de l'enseignant par abréviation
+                teacher_key = next((k for k, v in self.teachers.items() if v.get('abrv', '') == ens_abrv), None)
+                if not teacher_key:
+                    continue  # Pas d'enseignant correspondant
+               
+                if 'wish_priority' not in self.teachers[teacher_key]:
+                    self.teachers[teacher_key]['wish_priority'] = {}
+               
+                # Gérer les jours (assumer un seul jour par ligne)
+                jour_str = str(int(row['jour'])) if pd.notna(row.get('jour')) else None
+               
+                # Gérer les séances (peut être multiples, séparées par virgule)
+                seance_str = str(row.get('seance', '')).strip()
+                seances = [s.strip() for s in seance_str.split(',') if s.strip()]
+               
+                if jour_str and seances:
+                    date = self.day_to_date.get(jour_str)
+                    if date:
+                        for seance in seances:
+                            slot = f"{date} {seance}"
+                            if slot not in self.teachers[teacher_key]['indispo']:
+                                self.teachers[teacher_key]['indispo'].append(slot)
+                                priority = 2.0 - (idx / max(len(df), 1))
+                                self.teachers[teacher_key]['wish_priority'][slot] = priority
+                                loaded_count += 1
+                        affected_abrvs.add(ens_abrv)
+           
+            messagebox.showinfo("Succes",
+                              f"{loaded_count} voeux chargés pour {len(affected_abrvs)} enseignants\n"
+                              f"Priorités appliquées (premiers arrivés mieux protégés)")
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Erreur:\n{str(e)}")
 
     def configure_quotas(self):
         """Ouvre la fenêtre de configuration des quotas"""
@@ -1954,20 +2314,22 @@ class App(ctk.CTk):
                 self.show_error_message("❌ Erreur",
                     "Enseignant non trouvé dans le créneau source")
     def show_by_teacher(self):
-        """Vue par enseignant avec statistiques complètes et UI améliorée"""
+        """Vue par enseignant avec email comme identifiant"""
         if not self.best:
             self.show_error_message("❌ Erreur", "Veuillez générer le planning d'abord!")
             return
         
-        from datetime import datetime
         from collections import defaultdict
+        from datetime import datetime
         
         self.tree.delete(*self.tree.get_children())
-        self.tree["columns"] = ("Code", "Nom", "Grade", "Stats", "Statut", "Détails")
+        
+        # CHANGEMENT : Utiliser "Email" au lieu de "Code"
+        self.tree["columns"] = ("Email", "Nom", "Grade", "Stats", "Statut", "Détails")
         
         # Column configuration
         cols = {
-            "Code": {"width": 80, "text": "👤 Code", "anchor": "center"},
+            "Email": {"width": 200, "text": "📧 Email", "anchor": "w"},  # Changé de "Code" à "Email"
             "Nom": {"width": 200, "text": "📝 Nom Complet", "anchor": "w"},
             "Grade": {"width": 100, "text": "🎓 Grade", "anchor": "center"},
             "Stats": {"width": 150, "text": "📊 Quota/Assigné", "anchor": "center"},
