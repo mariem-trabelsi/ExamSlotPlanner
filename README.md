@@ -316,8 +316,8 @@ Suivez ces étapes pour cloner et exécuter l'application :
 
 1. **Cloner le projet** :
    ```bash
-   git clone <URL_DU_PROJET>
-   cd <NOM_DU_RÉPERTOIRE>
+   git clone https://github.com/mariem-trabelsi/ExamSlotPlanner.git
+   cd ExamSlotPlanner
    ```
 
 2. **Créer un environnement virtuel** :
@@ -343,7 +343,7 @@ Suivez ces étapes pour cloner et exécuter l'application :
    python main.py
    ```
 ## Prérequis
-Assurez-vous d'avoir Python (version 3.8 ou supérieure) installé. Vérifiez avec :
+Assurez-vous d'avoir Python (version 3.9 ou supérieure) installé. Vérifiez avec :
 ```bash
   python --version
 ```
