@@ -104,81 +104,225 @@ def check_prof_responsable_presence_simple(app):
     return results
 
 
+# def show_prof_responsable_details(app):
+#     """Vue detaillee des profs responsables - SIMPLIFIE"""
+#     if not app.best:
+#         from tkinter import messagebox
+#         messagebox.showerror("Erreur", "Generez le planning d'abord!")
+#         return
+    
+#     prof_resp_results = check_prof_responsable_presence_simple(app)
+    
+#     if not prof_resp_results:
+#         from tkinter import messagebox
+#         messagebox.showwarning("Info", "Aucun prof responsable defini dans les creneaux")
+#         return
+    
+#     app.tree.delete(*app.tree.get_children())
+#     app.tree["columns"] = ("Date", "Debut", "Fin", "Session", "Type", "Semestre", "Prof", "Salle", "Statut")
+    
+#     app.tree.heading("Date", text="Date Exam")
+#     app.tree.heading("Debut", text="H Debut")
+#     app.tree.heading("Fin", text="H Fin")
+#     app.tree.heading("Session", text="Session")
+#     app.tree.heading("Type", text="Type Ex")
+#     app.tree.heading("Semestre", text="Semestre")
+#     app.tree.heading("Prof", text="Enseignant")
+#     app.tree.heading("Salle", text="Salle")
+#     app.tree.heading("Statut", text="Present?")
+    
+#     app.tree.column("Date", width=120)
+#     app.tree.column("Debut", width=100)
+#     app.tree.column("Fin", width=100)
+#     app.tree.column("Session", width=80)
+#     app.tree.column("Type", width=80)
+#     app.tree.column("Semestre", width=120)
+#     app.tree.column("Prof", width=180)
+#     app.tree.column("Salle", width=80)
+#     app.tree.column("Statut", width=100)
+    
+#     # Sorting with proper date parsing (assuming date_exam is dd/mm/yyyy)
+#     def sort_key(x):
+#         try:
+#             date_obj = datetime.strptime(x['date_exam'], '%d/%m/%Y')
+#         except:
+#             date_obj = datetime.min
+#         try:
+#             time_obj = datetime.strptime(x['h_debut'], '%H:%M:%S')
+#         except:
+#             time_obj = datetime.min.time()
+#         return (date_obj, time_obj, x['nom'], x['cod_salle'])
+    
+#     sorted_results = sorted(prof_resp_results, key=sort_key)
+    
+#     for result in sorted_results:
+#         status = "PRESENT" if result['present'] else "ABSENT"
+#         tag = "present" if result['present'] else "absent"
+#         app.tree.insert("", "end", 
+#                         values=(result['date_exam'], result['h_debut'], result['h_fin'], 
+#                                 result['session'], result['type_ex'], result['semestre'], 
+#                                 result['nom'], result['cod_salle'], status),
+#                         tags=(tag,))
+    
+#     app.tree.tag_configure("present", background="#ccffcc", foreground="#006600")
+#     app.tree.tag_configure("absent", background="#ffcccc", foreground="#990000")
+    
+#     # Calculate assignments for rate (over total lines, including redundancies)
+#     total = len(prof_resp_results)
+#     presents = sum(1 for r in prof_resp_results if r['present'])
+#     absents = total - presents
+#     taux = (presents / total * 100) if total > 0 else 0
+    
+#     resume = f"TOTAL: {total} | PRESENTS: {presents} ({taux:.1f}%) | ABSENTS: {absents}"
+#     app.view_type_label.config(text=f"Vue: Enseignants Responsables | {resume}")
+#     app.current_view = "prof_responsable"
+#     app.configure_action_buttons()
+
 def show_prof_responsable_details(app):
-    """Vue detaillee des profs responsables - SIMPLIFIE"""
+    """Vue moderne et simplifiée des profs responsables"""
     if not app.best:
-        from tkinter import messagebox
-        messagebox.showerror("Erreur", "Generez le planning d'abord!")
+        app.show_error_message("❌ Erreur", "Veuillez générer le planning d'abord!")
         return
     
+    # Import the check function (adjust the import based on your file structure)
     prof_resp_results = check_prof_responsable_presence_simple(app)
     
     if not prof_resp_results:
-        from tkinter import messagebox
-        messagebox.showwarning("Info", "Aucun prof responsable defini dans les creneaux")
+        app.show_error_message("⚠️ Info", "Aucun prof responsable défini dans les créneaux")
         return
     
+    from datetime import datetime
+    from collections import defaultdict
+    
     app.tree.delete(*app.tree.get_children())
-    app.tree["columns"] = ("Date", "Debut", "Fin", "Session", "Type", "Semestre", "Prof", "Salle", "Statut")
+    app.tree["columns"] = ("Date", "Sessions", "Enseignant", "Présent")
     
-    app.tree.heading("Date", text="Date Exam")
-    app.tree.heading("Debut", text="H Debut")
-    app.tree.heading("Fin", text="H Fin")
-    app.tree.heading("Session", text="Session")
-    app.tree.heading("Type", text="Type Ex")
-    app.tree.heading("Semestre", text="Semestre")
-    app.tree.heading("Prof", text="Enseignant")
-    app.tree.heading("Salle", text="Salle")
-    app.tree.heading("Statut", text="Present?")
+    # Configure columns with modern styling
+    cols = {
+        "Date": {"width": 250, "text": "📅 Date Examen", "anchor": "w"},
+        "Sessions": {"width": 350, "text": "🕐 Sessions", "anchor": "w"},
+        "Enseignant": {"width": 300, "text": "👤 Enseignant Responsable", "anchor": "w"},
+        "Présent": {"width": 150, "text": "✓ Statut", "anchor": "center"}
+    }
     
-    app.tree.column("Date", width=120)
-    app.tree.column("Debut", width=100)
-    app.tree.column("Fin", width=100)
-    app.tree.column("Session", width=80)
-    app.tree.column("Type", width=80)
-    app.tree.column("Semestre", width=120)
-    app.tree.column("Prof", width=180)
-    app.tree.column("Salle", width=80)
-    app.tree.column("Statut", width=100)
+    for col, config in cols.items():
+        app.tree.heading(col, text=config["text"])
+        app.tree.column(col, width=config["width"], anchor=config["anchor"])
     
-    # Sorting with proper date parsing (assuming date_exam is dd/mm/yyyy)
-    def sort_key(x):
+    # Group results by date and teacher
+    grouped_data = defaultdict(lambda: defaultdict(list))
+    
+    for result in prof_resp_results:
+        date_exam = result['date_exam']
+        teacher_code = result.get('cod_ens', '')
+        
+        # Get teacher name from code
+        teacher_name = result.get('nom', f"#{teacher_code}")
+        if teacher_code and str(teacher_code) in app.teachers:
+            teacher_name = get_teacher_display_name(teacher_code,app.teachers)
+            
+        grouped_data[date_exam][teacher_name].append({
+            'session': result.get('session', ''),
+            'h_debut': result.get('h_debut', ''),
+            'salle': result.get('cod_salle', ''),
+            'present': result.get('present', False)
+        })
+    
+    # Day names in French
+    DAY_NAMES_FR = {
+        'Monday': 'Lundi',
+        'Tuesday': 'Mardi',
+        'Wednesday': 'Mercredi',
+        'Thursday': 'Jeudi',
+        'Friday': 'Vendredi',
+        'Saturday': 'Samedi',
+        'Sunday': 'Dimanche'
+    }
+    
+    # Insert grouped data
+    total_entries = 0
+    presents_count = 0
+    absents_count = 0
+    
+    for date_str in sorted(grouped_data.keys()):
+        # Format date with day name
         try:
-            date_obj = datetime.strptime(x['date_exam'], '%d/%m/%Y')
+            date_obj = datetime.strptime(date_str, '%d/%m/%Y')
+            day_name = DAY_NAMES_FR.get(date_obj.strftime('%A'), '')
+            formatted_date = f"{day_name} {date_str}"
         except:
-            date_obj = datetime.min
-        try:
-            time_obj = datetime.strptime(x['h_debut'], '%H:%M:%S')
-        except:
-            time_obj = datetime.min.time()
-        return (date_obj, time_obj, x['nom'], x['cod_salle'])
+            formatted_date = date_str
+        
+        # Create parent for this date
+        date_parent = app.tree.insert("", "end", 
+                                      values=(f"📅 {formatted_date}", "", "", ""),
+                                      tags=('date_group',),
+                                      open=True)
+        
+        for teacher_name in sorted(grouped_data[date_str].keys()):
+            sessions_list = grouped_data[date_str][teacher_name]
+            
+            # Format sessions info
+            sessions_info = []
+            all_present = True
+            any_absent = False
+            
+            for session_data in sorted(sessions_list, key=lambda x: x['h_debut']):
+                session = session_data['session']
+                time = session_data['h_debut'][:5] if len(session_data['h_debut']) >= 5 else session_data['h_debut']
+                salle = session_data['salle']
+                present = session_data['present']
+                
+                if present:
+                    presents_count += 1
+                else:
+                    absents_count += 1
+                    all_present = False
+                    any_absent = True
+                
+                total_entries += 1
+                
+                # Format: "S1 (08:30) - Salle A101"
+                session_text = f"{session} ({time})"
+                if salle:
+                    session_text += f" - Salle {salle}"
+                sessions_info.append(session_text)
+            
+            sessions_display = " | ".join(sessions_info)
+            
+            # Determine status
+            if all_present:
+                status = "✅ Présent"
+                tag = "present"
+            elif any_absent:
+                status = "❌ Absent"
+                tag = "absent"
+            else:
+                status = "⚠️ Inconnu"
+                tag = "warning"
+            
+            # Insert teacher row as child of date
+            app.tree.insert(date_parent, "end",
+                           values=("", sessions_display, teacher_name, status),
+                           tags=(tag,))
     
-    sorted_results = sorted(prof_resp_results, key=sort_key)
+    # Configure tag colors
+    app.tree.tag_configure("date_group", background="#E5E7EB", 
+                           font=("Segoe UI", 11, "bold"))
+    app.tree.tag_configure("present", background="#D1FAE5", foreground="#065F46")
+    app.tree.tag_configure("absent", background="#FEE2E2", foreground="#991B1B")
+    app.tree.tag_configure("warning", background="#FEF3C7", foreground="#92400E")
     
-    for result in sorted_results:
-        status = "PRESENT" if result['present'] else "ABSENT"
-        tag = "present" if result['present'] else "absent"
-        app.tree.insert("", "end", 
-                        values=(result['date_exam'], result['h_debut'], result['h_fin'], 
-                                result['session'], result['type_ex'], result['semestre'], 
-                                result['nom'], result['cod_salle'], status),
-                        tags=(tag,))
+    # Calculate statistics
+    taux_presence = (presents_count / total_entries * 100) if total_entries > 0 else 0
+    taux_absence = (absents_count / total_entries * 100) if total_entries > 0 else 0
     
-    app.tree.tag_configure("present", background="#ccffcc", foreground="#006600")
-    app.tree.tag_configure("absent", background="#ffcccc", foreground="#990000")
-    
-    # Calculate assignments for rate (over total lines, including redundancies)
-    total = len(prof_resp_results)
-    presents = sum(1 for r in prof_resp_results if r['present'])
-    absents = total - presents
-    taux = (presents / total * 100) if total > 0 else 0
-    
-    resume = f"TOTAL: {total} | PRESENTS: {presents} ({taux:.1f}%) | ABSENTS: {absents}"
-    app.view_type_label.config(text=f"Vue: Enseignants Responsables | {resume}")
-    app.current_view = "prof_responsable"
-    app.configure_action_buttons()
-
-
+    # Update summary if exists
+    if hasattr(app, 'summary_label'):
+        summary_text = (f"📊 Total: {total_entries} créneaux | "
+                       f"✅ {presents_count} présents ({taux_presence:.1f}%) | "
+                       f"❌ {absents_count} absents ({taux_absence:.1f}%)")
+        app.summary_label.configure(text=summary_text)
 
 
 

@@ -1,4 +1,3 @@
-
 import customtkinter as ctk
 from tkinter import messagebox
 import bcrypt
@@ -334,7 +333,7 @@ class LoginApp(ctk.CTk):
                 'username': result['username'],
                 'role': result['role']
             }
-            messagebox.showinfo("Succès", f"Bienvenue {result['username']}!\n\nVous êtes connecté en tant qu'{result['role']}.")
+            # messagebox.showinfo("Succès", f"Bienvenue {result['username']}!\n\nVous êtes connecté en tant qu'{result['role']}.")
             # Ici vous pouvez ouvrir la fenêtre principale de l'application
             self.open_main_application()
         else:
