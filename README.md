@@ -1,17 +1,17 @@
 # 🧬 Algorithme Génétique - Optimisation du Planning de Surveillance
 
-##  Vue d'ensemble
+## ✋ Vue d'ensemble
 
 Implémentant un **algorithme génétique pour optimiser un planning de surveillance** en assignant des enseignants à des créneaux horaires. L'algorithme cherche à respecter les contraintes tout en maximisant l'équité et la qualité globale du planning.
 
 ---
-## Structures du projet
+## ✋ Structures du projet
 
 <img width="683" height="438" alt="image" src="https://github.com/user-attachments/assets/cbf2171e-a073-4271-9707-6f40ff9c8e2b" />
 
 
     
-##  Méthodes principales
+## ✋ Méthodes principales
 
 ### 1. **`fitness(assignment, teachers, slots_dict)`** — Évaluation de la qualité
 
@@ -139,7 +139,7 @@ Parse les créneaux au format 'YYYY-MM-DD SESSION' (ex: '2025-05-13 S2')
 
 ---
 
-## Critères d'arrêt
+## ✋ Critères d'arrêt
 
 L'algorithme s'arrête selon trois critères implémentés dans **`run_ga_optimized()`** :
 
@@ -174,7 +174,7 @@ max_generations = 3000
 
 ---
 
-## Dynamique de mutation
+## ✋ Dynamique de mutation
 
 La **mutation rate** s'adapte automatiquement selon le niveau de stagnation pour équilibrer **exploration** et **exploitation** :
 
@@ -214,7 +214,7 @@ if improvement >= MIN_IMPROVEMENT:
 
 ---
 
-##  Flux d'exécution par génération
+## ✋  Flux d'exécution par génération
 
 ```
 GÉNÉRATION n
@@ -252,7 +252,7 @@ GÉNÉRATION n
 
 ---
 
-##  Exemple concret
+## ✋ Exemple concret
 
 **Scénario : Professeur "Alice" surchargé à la génération 5**
 
@@ -284,7 +284,7 @@ GÉNÉRATION n
 
 ---
 
-##  Paramètres clés
+## ✋ Paramètres clés
 
 | Paramètre | Valeur | Description |
 |-----------|--------|-------------|
@@ -298,7 +298,7 @@ GÉNÉRATION n
 
 ---
 
-##  Stratégie d'optimisation
+## ✋  Stratégie d'optimisation
 
 1. **Initialisation** : création aléatoire avec biais vers professeurs responsables
 2. **Évaluation** : score multi-critères équilibrant respect de contraintes et équité
@@ -311,4 +311,4 @@ GÉNÉRATION n
 **Résultat** : un planning viable, équitable et respectant les contraintes majeure
 
 ---
-## Installation & exécution
+## ✋ Installation & exécution
