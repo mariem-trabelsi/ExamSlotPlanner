@@ -5,7 +5,7 @@
 Implémentant un **algorithme génétique pour optimiser un planning de surveillance** en assignant des enseignants à des créneaux horaires. L'algorithme cherche à respecter les contraintes tout en maximisant l'équité et la qualité globale du planning.
 
 ---
-## 🧚‍♀️ Structures du projet
+## 🧚‍♀️ Organizations des fichiers
 
 <img width="557" height="356" alt="image" src="https://github.com/user-attachments/assets/51f915b7-f9f1-4fa0-8029-02d3a7e54789" />
 
