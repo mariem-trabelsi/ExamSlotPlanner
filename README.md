@@ -319,12 +319,16 @@ Suivez ces étapes pour cloner et exécuter l'application :
    git clone https://github.com/mariem-trabelsi/ExamSlotPlanner.git
    cd ExamSlotPlanner
    ```
+2. **Supprimer l'environnement virtuel existant :** :
+   ```bash
+   rm -rf venv
+   ```
 
-2. **Créer un environnement virtuel** :
+3. **Créer un environnement virtuel** :
    ```bash
    python -m venv venv
    ```
-3. **Activer l'environnement virtuel** :
+4. **Activer l'environnement virtuel** :
    Sur windows:
    ```bash
     venv\Scripts\activate
@@ -334,11 +338,11 @@ Suivez ces étapes pour cloner et exécuter l'application :
    ```bash
     source venv/bin/activate
    ```
-4. **Installer les dépendances** :
+5. **Installer les dépendances** :
  ```bash
    pip install -r requirements.txt
 ```
-5. **Exécuter l'application** :
+6. **Exécuter l'application** :
    ```bash
    python main.py
    ```
