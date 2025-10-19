@@ -414,12 +414,6 @@ class LoginApp(ctk.CTk):
                                    command=submit_change)
         submit_btn.pack(pady=25, padx=25)
     
-    def open_main_application(self):
-        """Ouvre la fenêtre principale de l'application"""
-        # TODO: Implémenter l'ouverture de votre application principale
-        print(f"Utilisateur connecté: {self.current_user}")
-        # self.withdraw()  # Cacher la fenêtre de login
-        # Ouvrir votre fenêtre principale ici
     
     def go_back(self):
         """Retour à la page précédente"""
