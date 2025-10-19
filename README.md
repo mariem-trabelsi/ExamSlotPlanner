@@ -162,7 +162,7 @@ MIN_IMPROVEMENT = 1.0
 
 ### **3. Nombre maximum de générations**
 ```python
-max_generations = 2
+max_generations = 3000
 ```
 - Limite absolue du nombre d'itérations
 - **Status retourné** : `"max_gen"`
