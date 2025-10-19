@@ -2179,7 +2179,7 @@ class App(ctk.CTk):
             sessions_frame = ctk.CTkFrame(dest_scroll, fg_color="transparent")
             sessions_frame.pack(fill="x", pady=(0, 5), padx=10)
             
-            SESSION_TIMES = {'s1': '08:30', 's2': '10:45', 's3': '14:00', 's4': '16:15'}
+            SESSION_TIMES = {'s1': '08:30', 's2': '10:30', 's3': '12:30', 's4': '14:30'}
             
             for slot_key, session in sorted(slots_by_date[date], key=lambda x: x[1]):
                 session_btn = ctk.CTkButton(
@@ -2725,7 +2725,7 @@ class App(ctk.CTk):
                         formatted_date = f"{day_name} {date_obj.strftime('%d/%m/%Y')}"
                         
                         # Session time
-                        session_times = {'S1': '08:30', 'S2': '10:45', 'S3': '14:00', 'S4': '16:15'}
+                        session_times = {'S1': '08:30', 'S2': '10:30', 'S3': '12:30', 'S4': '14:30'}
                         time = session_times.get(session, "N/A")
                         
                         self.tree.insert(parent, "end", values=(
@@ -2933,7 +2933,7 @@ class App(ctk.CTk):
                     formatted_date = f"{day_name} {date_obj.strftime('%d/%m/%Y')}"
                     
                     # Session time
-                    session_times = {'S1': '08:30', 'S2': '10:45', 'S3': '14:00', 'S4': '16:15'}
+                    session_times = {'S1': '08:30', 'S2': '10:30', 'S3': '12:30', 'S4': '14:30'}
                     time = session_times.get(session, "N/A")
                     
                     # Format teachers
@@ -3180,11 +3180,11 @@ class App(ctk.CTk):
         # Session times mapping
         SESSION_TIMES = {
             's1': '08:30:00',
-            's2': '10:45:00',
-            's3': '14:00:00',
-            's4': '16:15:00'
+            's2': '10:30:00',
+            's3': '12:30:00',
+            's4': '14:30:00'
         }
-        
+
         pdf_count = 0
         email_count = 0
         email_errors = []
@@ -3555,11 +3555,11 @@ class App(ctk.CTk):
         # Session times
         SESSION_TIMES = {
             'S1': '08:30',
-            'S2': '10:45',
-            'S3': '14:00',
-            'S4': '16:15'
+            'S2': '10:30',
+            'S3': '12:30',
+            'S4': '14:30'
         }
-        
+
         # Create PDF filename
         pdf_filename = os.path.join(output_folder, f"Planning_General_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf")
         
