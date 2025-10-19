@@ -311,4 +311,40 @@ GÉNÉRATION n
 **Résultat** : un planning viable, équitable et respectant les contraintes majeure
 
 ---
-## 🧚‍♀️ Installation & exécution
+## 🧚‍♀️ Installation & exécution du projet
+Suivez ces étapes pour cloner et exécuter l'application :
+
+1. **Cloner le projet** :
+   ```bash
+   git clone <URL_DU_PROJET>
+   cd <NOM_DU_RÉPERTOIRE>
+   ```
+
+2. **Créer un environnement virtuel** :
+   ```bash
+   python -m venv venv
+   ```
+3. **Activer l'environnement virtuel** :
+   Sur windows:
+   ```bash
+    venv\Scripts\activate
+   ```
+
+    Sur Linux/Mac ::
+   ```bash
+    source venv/bin/activate
+   ```
+4. **Installer les dépendances** :
+ ```bash
+   pip install -r requirements.txt
+```
+5. **Exécuter l'application** :
+   ```bash
+   python main.py
+   ```
+## Prérequis
+Assurez-vous d'avoir Python (version 3.8 ou supérieure) installé. Vérifiez avec :
+```bash
+  python --version
+```
+   
