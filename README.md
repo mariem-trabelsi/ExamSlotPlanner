@@ -309,3 +309,6 @@ GÉNÉRATION n
 7. **Arrêt** : trois critères pour optimiser temps vs qualité
 
 **Résultat** : un planning viable, équitable et respectant les contraintes majeure
+
+---
+## Installation & exécution
