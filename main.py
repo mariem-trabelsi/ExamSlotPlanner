@@ -19,6 +19,12 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from datetime import datetime
 import os
 from login import LoginApp
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+import glob
 
 from genetic_algorithm import (
     run_ga_optimized, fitness, is_valid_teacher, 
@@ -3144,8 +3150,8 @@ class App(ctk.CTk):
     #         self.show_by_room_wrapper()
     #     elif self.current_view == "quality":
     #         self.show_planning_quality_wrapper()
-    def export_teachers_to_pdf(self, output_folder="exports"):
-        """Exporte un PDF pour chaque enseignant avec ses créneaux"""
+    def export_teachers_to_pdf(self, output_folder="exports", send_emails=True):
+        """Exporte un PDF pour chaque enseignant avec ses créneaux et option d'envoi par email"""
         if not self.best:
             self.show_error_message("❌ Erreur", "Veuillez générer le planning d'abord!")
             return
@@ -3153,15 +3159,16 @@ class App(ctk.CTk):
         # Create output folder if it doesn't exist
         if not os.path.exists(output_folder):
             os.makedirs(output_folder)
+        
+        # Delete old Affectation PDFs
         import glob
         old_pdfs = glob.glob(os.path.join(output_folder, "Affectation_*.pdf"))
         for old_pdf in old_pdfs:
             try:
                 os.remove(old_pdf)
-                print(f"Deleted old PDF: {old_pdf}")
             except Exception as e:
                 print(f"Could not delete {old_pdf}: {e}")
-
+        
         # Organize assignments by teacher
         from collections import defaultdict
         teacher_slots = defaultdict(list)
@@ -3173,23 +3180,17 @@ class App(ctk.CTk):
         # Session times mapping
         SESSION_TIMES = {
             's1': '08:30:00',
-            's2': '10:30:00',
-            's3': '10:30:00',  # Adjust based on your actual times
-            's4': '10:30:00'
-        }
-        
-        # Day names in French
-        DAY_NAMES_FR = {
-            'Monday': 'Lundi',
-            'Tuesday': 'Mardi',
-            'Wednesday': 'Mercredi',
-            'Thursday': 'Jeudi',
-            'Friday': 'Vendredi',
-            'Saturday': 'Samedi',
-            'Sunday': 'Dimanche'
+            's2': '10:45:00',
+            's3': '14:00:00',
+            's4': '16:15:00'
         }
         
         pdf_count = 0
+        email_count = 0
+        email_errors = []
+        
+        # Store PDFs info for emailing
+        pdfs_to_email = []
         
         # Generate PDF for each assigned teacher
         for teacher_code in sorted(teacher_slots.keys()):
@@ -3199,6 +3200,7 @@ class App(ctk.CTk):
             teacher_data = self.teachers.get(str(teacher_code), {})
             prenom = teacher_data.get('prenom', '')
             nom = teacher_data.get('nom', '')
+            email = teacher_data.get('email', '')
             full_name = f"Mr/Ms {prenom} {nom}" if prenom and nom else f"Enseignant #{teacher_code}"
             
             # Create PDF filename
@@ -3242,7 +3244,7 @@ class App(ctk.CTk):
                 alignment=TA_LEFT
             )
             
-            # Header section (mimicking the document)
+            # Header section
             header_data = [
                 ['GESTION DES EXAMENS ET\nDÉLIBÉRATIONS', 'EXD-FR-08-01'],
                 ["Procédure d'exécution des épreuves", f"Date d'approbation\n{datetime.now().strftime('%d-%m-%y')}"],
@@ -3257,7 +3259,6 @@ class App(ctk.CTk):
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                 ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#1e3a8a')),
-                ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.white, colors.HexColor('#f0f4ff')])
             ]))
             
             elements.append(header_table)
@@ -3293,7 +3294,7 @@ class App(ctk.CTk):
                     # Get time
                     time = SESSION_TIMES.get(session, '08:30:00')
                     
-                    # Duration (default 1.5H)
+                    # Duration
                     duration = '1.5 H'
                     
                     schedule_data.append([formatted_date, time, duration])
@@ -3303,13 +3304,11 @@ class App(ctk.CTk):
             # Create schedule table
             schedule_table = Table(schedule_data, colWidths=[6*cm, 6*cm, 6*cm])
             schedule_table.setStyle(TableStyle([
-                # Header row
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e3a8a')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
                 ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 12),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                # Data rows
                 ('FONT', (0, 1), (-1, -1), 'Helvetica', 11),
                 ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#1e3a8a')),
                 ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#e6f0ff'), colors.white])
@@ -3320,14 +3319,183 @@ class App(ctk.CTk):
             # Build PDF
             doc.build(elements)
             pdf_count += 1
+            
+            # Store for emailing if email exists
+            if send_emails and email:
+                pdfs_to_email.append({
+                    'teacher_code': teacher_code,
+                    'full_name': full_name,
+                    'email': "meriem.trabelsi@etudiant-isi.utm.tn",
+                    'pdf_path': pdf_filename
+                })
+        
+        # Send emails if requested
+        if send_emails and pdfs_to_email:
+            # Show email configuration dialog
+            email_config = self.show_email_config_dialog()
+            
+            if email_config:
+                email_count, email_errors = self.send_pdfs_via_email(pdfs_to_email, email_config)
         
         # Show success message
-        self.show_success_message(
-            "✅ Export Réussi", 
-            f"{pdf_count} PDF(s) générés dans le dossier '{output_folder}'"
-        )
+        if send_emails:
+            if email_errors:
+                error_msg = f"{pdf_count} PDF(s) générés.\n{email_count} email(s) envoyés.\n{len(email_errors)} erreur(s):\n"
+                self.show_error_message("⚠️ Export avec erreurs", error_msg)
+            else:
+                self.show_success_message(
+                    "✅ Export et Envoi Réussis", 
+                    f"{pdf_count} PDF(s) générés et {email_count} email(s) envoyés!"
+                )
+        else:
+            self.show_success_message(
+                "✅ Export Réussi", 
+                f"{pdf_count} PDF(s) générés dans le dossier '{output_folder}'"
+            )
         
         return pdf_count
+
+
+    def show_email_config_dialog(self):
+        """Affiche une boîte de dialogue pour configurer l'envoi d'emails"""
+        config_window = ctk.CTkToplevel(self)
+        config_window.title("📧 Configuration Email")
+        config_window.geometry("600x650")
+        config_window.transient(self)
+        config_window.grab_set()
+        
+        # Header
+        header = ctk.CTkFrame(config_window, fg_color="#3B82F6", corner_radius=10)
+        header.pack(fill="x", padx=20, pady=20)
+        
+        ctk.CTkLabel(header,
+                    text="📧 Configuration de l'envoi par email",
+                    font=ctk.CTkFont(size=16, weight="bold"),
+                    text_color="white").pack(pady=15)
+        
+        # Form frame
+        form_frame = ctk.CTkFrame(config_window, fg_color="transparent")
+        form_frame.pack(fill="both", expand=True, padx=30, pady=10)
+        
+        # Email sender
+        ctk.CTkLabel(form_frame, text="Votre email:", font=ctk.CTkFont(size=12, weight="bold")).pack(anchor="w", pady=(10, 5))
+        email_entry = ctk.CTkEntry(form_frame, width=400, placeholder_text="exemple@gmail.com")
+        email_entry.pack(pady=(0, 15))
+        
+        # Password
+        ctk.CTkLabel(form_frame, text="Mot de passe d'application:", font=ctk.CTkFont(size=12, weight="bold")).pack(anchor="w", pady=(10, 5))
+        password_entry = ctk.CTkEntry(form_frame, width=400, show="*", placeholder_text="Mot de passe")
+        password_entry.pack(pady=(0, 15))
+        
+        # SMTP Server
+        ctk.CTkLabel(form_frame, text="Serveur SMTP:", font=ctk.CTkFont(size=12, weight="bold")).pack(anchor="w", pady=(10, 5))
+        smtp_entry = ctk.CTkEntry(form_frame, width=400, placeholder_text="smtp.gmail.com")
+        smtp_entry.insert(0, "smtp.gmail.com")
+        smtp_entry.pack(pady=(0, 15))
+        
+        # SMTP Port
+        ctk.CTkLabel(form_frame, text="Port SMTP:", font=ctk.CTkFont(size=12, weight="bold")).pack(anchor="w", pady=(10, 5))
+        port_entry = ctk.CTkEntry(form_frame, width=400, placeholder_text="587")
+        port_entry.insert(0, "587")
+        port_entry.pack(pady=(0, 15))
+        
+        # Info label
+        info_text = "💡 Pour Gmail, utilisez un mot de passe d'application\n(Compte Google > Sécurité > Validation en 2 étapes > Mots de passe d'application)"
+        ctk.CTkLabel(form_frame, text=info_text, font=ctk.CTkFont(size=10), 
+                    text_color="gray", wraplength=400).pack(pady=10)
+        
+        # Result variable
+        result = {}
+        
+        def on_send():
+            if not email_entry.get() or not password_entry.get():
+                self.show_error_message("❌ Erreur", "Veuillez remplir tous les champs!")
+                return
+            
+            result['sender_email'] = email_entry.get()
+            result['password'] = password_entry.get()
+            result['smtp_server'] = smtp_entry.get() or "smtp.gmail.com"
+            result['smtp_port'] = int(port_entry.get() or "587")
+            config_window.destroy()
+        
+        # Buttons
+        button_frame = ctk.CTkFrame(config_window, fg_color="transparent")
+        button_frame.pack(pady=20)
+        
+        ctk.CTkButton(button_frame, text="📧 Envoyer", command=on_send,
+                    width=150, height=40, fg_color="#10B981", hover_color="#059669").pack(side="left", padx=10)
+        
+        ctk.CTkButton(button_frame, text="❌ Annuler", command=config_window.destroy,
+                    width=150, height=40, fg_color="#6B7280", hover_color="#4B5563").pack(side="left", padx=10)
+        
+        config_window.wait_window()
+        return result if result else None
+
+
+    def send_pdfs_via_email(self, pdfs_to_email, email_config):
+        """Envoie les PDFs par email à chaque enseignant"""
+        sent_count = 0
+        errors = []
+        
+        sender_email = email_config['sender_email']
+        password = email_config['password']
+        smtp_server = email_config['smtp_server']
+        smtp_port = email_config['smtp_port']
+        
+        try:
+            # Connect to SMTP server
+            server = smtplib.SMTP(smtp_server, smtp_port)
+            server.starttls()
+            server.login(sender_email, password)
+            
+            for pdf_info in pdfs_to_email:
+                try:
+                    # Create message
+                    msg = MIMEMultipart()
+                    msg['From'] = sender_email
+                    # msg['To'] = "pdf_info['email']"
+                    msg['To'] = "meriem.trabelsi@etudiant-isi.utm.tn"
+
+                    msg['Subject'] = "Planning de Surveillance - Affectation des Examens"
+                    
+                    # Email body
+                    body = f"""Bonjour {pdf_info['full_name']},
+
+    Veuillez trouver ci-joint votre affectation pour la surveillance des examens.
+
+    Merci de bien vouloir consulter le document PDF en pièce jointe.
+
+    Cordialement,
+    Service des Examens"""
+                    
+                    msg.attach(MIMEText(body, 'plain', 'utf-8'))
+                    
+                    # Attach PDF
+                    with open(pdf_info['pdf_path'], 'rb') as attachment:
+                        part = MIMEBase('application', 'octet-stream')
+                        part.set_payload(attachment.read())
+                        encoders.encode_base64(part)
+                        part.add_header('Content-Disposition', 
+                                    f"attachment; filename= {os.path.basename(pdf_info['pdf_path'])}")
+                        msg.attach(part)
+                    
+                    # Send email
+                    server.send_message(msg)
+                    sent_count += 1
+                    print(f"Email sent to {pdf_info['email']}")
+                    
+                except Exception as e:
+                    error_msg = f"{pdf_info['full_name']}: {str(e)}"
+                    errors.append(error_msg)
+                    print(f"Error sending to {pdf_info['email']}: {e}")
+            
+            server.quit()
+            
+        except Exception as e:
+            errors.append(f"Erreur de connexion SMTP: {str(e)}")
+            print(f"SMTP connection error: {e}")
+        
+        return sent_count, errors
     def export_general_pdf(self, output_folder="exports"):
         """Exporte un PDF général avec toutes les sessions et leurs enseignants"""
         if not self.best:
