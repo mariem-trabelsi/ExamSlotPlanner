@@ -7,23 +7,8 @@ Implémentant un **algorithme génétique pour optimiser un planning de surveill
 ---
 ## Structures du projet
 
-projet/
-├── main.py                 # ✅ Nouveau fichier restructuré
-├── constants.py            # ✅ Nouveau module
-├── database.py             # ✅ Nouveau module
-├── data_loader.py          # ✅ Nouveau module
-├── ui_components.py        # ✅ Nouveau module
-├── email_utils.py          # ✅ Nouveau module
-├── export_methods.py       # ✅ Nouveau module
-│
-├── genetic_algorithm.py    # 📂 Fichier existant (à conserver)
-├── view_methods.py         # 📂 Fichier existant (à conserver)
-├── pdf_export.py           # 📂 Fichier existant (à conserver)
-├── login.py                # 📂 Fichier existant (à conserver)
-│
-└── exports/                # 📁 Dossier créé automatiquement
-    ├── Affectation_*.pdf
-    └── Planning_General_*.pdf
+<img width="630" height="389" alt="image" src="https://github.com/user-attachments/assets/c8b3915b-e9d9-4ec8-b5c8-de2371906c13" />
+
     
 ## 🔧 Méthodes principales
 
