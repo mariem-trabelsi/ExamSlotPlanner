@@ -5,7 +5,26 @@
 Implémentant un **algorithme génétique pour optimiser un planning de surveillance** en assignant des enseignants à des créneaux horaires. L'algorithme cherche à respecter les contraintes tout en maximisant l'équité et la qualité globale du planning.
 
 ---
+## Structures du projet
 
+projet/
+├── main.py                 # ✅ Nouveau fichier restructuré
+├── constants.py            # ✅ Nouveau module
+├── database.py             # ✅ Nouveau module
+├── data_loader.py          # ✅ Nouveau module
+├── ui_components.py        # ✅ Nouveau module
+├── email_utils.py          # ✅ Nouveau module
+├── export_methods.py       # ✅ Nouveau module
+│
+├── genetic_algorithm.py    # 📂 Fichier existant (à conserver)
+├── view_methods.py         # 📂 Fichier existant (à conserver)
+├── pdf_export.py           # 📂 Fichier existant (à conserver)
+├── login.py                # 📂 Fichier existant (à conserver)
+│
+└── exports/                # 📁 Dossier créé automatiquement
+    ├── Affectation_*.pdf
+    └── Planning_General_*.pdf
+    
 ## 🔧 Méthodes principales
 
 ### 1. **`fitness(assignment, teachers, slots_dict)`** — Évaluation de la qualité
