@@ -6,7 +6,9 @@ Implémentant un **algorithme génétique pour optimiser un planning de surveill
 
 ---
 ## 🧚‍♀️ Structures du projet
-![Uploading image.png…]()
+
+<img width="557" height="356" alt="image" src="https://github.com/user-attachments/assets/51f915b7-f9f1-4fa0-8029-02d3a7e54789" />
+
 
     
 ## 🧚‍♀️ Méthodes principales
