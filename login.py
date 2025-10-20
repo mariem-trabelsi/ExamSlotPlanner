@@ -2,11 +2,8 @@ import customtkinter as ctk
 from tkinter import messagebox
 import bcrypt
 import json
-import os
 from pathlib import Path
-from PIL import Image, ImageTk
-import requests
-from io import BytesIO
+from PIL import Image
 
 class AuthManager:
     """Gestionnaire d'authentification avec hashage bcrypt"""

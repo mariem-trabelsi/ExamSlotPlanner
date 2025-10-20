@@ -31,7 +31,6 @@ def get_teacher_slots(assignment, teacher):
 
 
 
-
 def check_gap_violations(assignment, teachers, slots_dict):
     """Vérifie les séances creuses dans la même journée"""
     violations = {'one_gap': 0, 'two_gaps': 0}
@@ -177,11 +176,11 @@ def fitness(assignment, teachers, slots_dict):
         
         # Contraintes sur le nombre de profs
         if len(unique_assigned) < min_needed:
-            score -= 200 * (min_needed - len(unique_assigned)) ** 2
+            score -= 300 * (min_needed - len(unique_assigned)) ** 2
         elif len(unique_assigned) > max_needed:
             score -= 500 * (len(unique_assigned) - max_needed) ** 2
-        elif len(unique_assigned) == min_needed:
-            score += 100
+        # elif len(unique_assigned) == min_needed:
+        #     score += 100
         
         # Pénalité pour doublons
         if len(valid_teachers) != len(unique_assigned):
@@ -225,7 +224,7 @@ def fitness(assignment, teachers, slots_dict):
     
     # Équité par grade
     total_variance = calculate_grade_equity(counts, teachers)
-    score -= 325 * total_variance
+    score -= 400 * total_variance
     
     return score
 
