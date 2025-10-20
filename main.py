@@ -40,35 +40,6 @@ from constants import (
     GRADE_QUOTAS, SESSION_TIMES, SESSION_ORDER, SESSION_COLORS, 
     COLORS
 )
-# # Configuration initiale des quotas par grade
-# GRADE_QUOTAS = {
-#     "PR": 4, "MA": 7, "V": 4, "PTC": 9, "AC": 9,
-#     "VA": 4, "AS": 8, "EX": 3, "MC": 4, "PES": 9
-# }
-
-# # Mappings des sessions
-# SESSION_TIMES = {
-#     "S1": "08:30",
-#     "S2": "10:30",
-#     "S3": "12:30",
-#     "S4": "14:30"
-# }
-
-# SESSION_ORDER = {
-#     "S1": 1,
-#     "S2": 2,
-#     "S3": 3,
-#     "S4": 4
-# }
-
-# SESSION_COLORS = {
-#     's1': ('#E3F2FD', '#1976D2'),
-#     's2': ('#E8F5E9', '#388E3C'),
-#     's3': ('#FFF3E0', '#F57C00'),
-#     's4': ('#F3E5F5', '#7B1FA2')
-# }
-
-#system_font = "Segoe UI"
 
 class PlanningApp(ctk.CTk):
     def __init__(self):
