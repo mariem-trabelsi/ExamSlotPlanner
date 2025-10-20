@@ -321,7 +321,7 @@ Suivez ces étapes pour cloner et exécuter l'application :
    ```
 2. **Supprimer l'environnement virtuel existant :** :
    ```bash
-   rm -rf venv
+   rm -rf env_surveillance
    ```
 
 3. **Créer un environnement virtuel** :
