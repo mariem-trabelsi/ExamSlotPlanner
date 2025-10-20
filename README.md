@@ -326,7 +326,7 @@ Suivez ces étapes pour cloner et exécuter l'application :
 
 3. **Créer un environnement virtuel** :
    ```bash
-   python -m venv venv
+   python3.11 -m venv venv
    ```
 4. **Activer l'environnement virtuel** :
    Sur windows:
