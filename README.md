@@ -344,6 +344,13 @@ Assurez-vous d'avoir Python installé. Vérifiez avec :
 ```bash
   python --version
 ```
+## Login
+
+**usename** : admin
+**password** admin12
+
+option: chnager le mot de passe
+
 ## Chargement des données
 **chargement des enseignants (enseignant-20251017-New.xlsx)**
 <img width="996" height="357" alt="image" src="https://github.com/user-attachments/assets/74930be9-5346-40d0-9c7d-6951629f2e0d" />
@@ -351,6 +358,21 @@ Assurez-vous d'avoir Python installé. Vérifiez avec :
 <img width="1014" height="346" alt="image" src="https://github.com/user-attachments/assets/5f4293ca-43a4-4ad3-affc-b432b5c0865f" />
 **chargements des voeux d'indisponibilé (souhait_surveillance--modifié.xlsx)** (nous avons changé les jours (lundi,mardi..) par des numéros pour éviter problème d'une session sur deux semaines..
 <img width="720" height="391" alt="image" src="https://github.com/user-attachments/assets/d8f6ba69-8d47-46a2-9e05-affd03ba0aca" />
+
+## Exemple d'un planning (qualité)
+
+<img width="720" height="391" alt="image" src="https://github.com/user-attachments/assets/323184e6-ae7f-4164-ba7a-103f7b843daf" />
+
+<img width="1434" height="783" alt="image" src="https://github.com/user-attachments/assets/946fa7f4-5aa3-458f-8741-3213537ed4a8" />
+
+
+<img width="1420" height="772" alt="image" src="https://github.com/user-attachments/assets/15e2a762-fac2-49ef-8615-df7368165e1f" />
+
+
+<img width="640" height="366" alt="image" src="https://github.com/user-attachments/assets/402af4bc-a98f-4eba-a736-8c0bbbf5d0b8" />
+
+
+
 
 
 
