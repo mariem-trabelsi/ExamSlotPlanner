@@ -772,20 +772,20 @@ class App(ctk.CTk):
             command=lambda: self.switch_view('room')
         )
         self.room_view_btn.pack(side='left', padx=5)
-        self.subject_manager_view_btn = ctk.CTkButton(
-            view_buttons_frame,
-            text="👤 Par Responsable Matière",
-            width=120,
-            height=40,
-            corner_radius=10,
-            text_color="black",
-            fg_color=self.colors['primary'] if self.current_view == 'subject_manager' else 'transparent',
-            hover_color=self.colors['hover'],
-            border_width=2,
-            border_color=self.colors['primary'],
-            command=lambda: self.switch_view('subject_manager')
-        )
-        self.subject_manager_view_btn.pack(side='left', padx=5)
+        # self.subject_manager_view_btn = ctk.CTkButton(
+        #     view_buttons_frame,
+        #     text="👤 Par Responsable Matière",
+        #     width=120,
+        #     height=40,
+        #     corner_radius=10,
+        #     text_color="black",
+        #     fg_color=self.colors['primary'] if self.current_view == 'subject_manager' else 'transparent',
+        #     hover_color=self.colors['hover'],
+        #     border_width=2,
+        #     border_color=self.colors['primary'],
+        #     command=lambda: self.switch_view('subject_manager')
+        # )
+        # self.subject_manager_view_btn.pack(side='left', padx=5)
        
 
             #     tk.Button(btn_frame2, text="Qualite Planning", command=self.show_planning_quality_wrapper,
@@ -920,9 +920,9 @@ class App(ctk.CTk):
         self.room_view_btn.configure(
             fg_color=self.colors['primary'] if view_type == 'room' else 'transparent'
         )
-        self.subject_manager_view_btn.configure(
-            fg_color=self.colors['primary'] if view_type == 'subject_manager' else 'transparent'
-        )
+        # self.subject_manager_view_btn.configure(
+        #     fg_color=self.colors['primary'] if view_type == 'subject_manager' else 'transparent'
+        # )
         self.quality_btn.configure(
             fg_color=self.colors['success'] if view_type == 'quality' else 'transparent'
         )
