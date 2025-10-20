@@ -1,26 +1,25 @@
 # export_methods.py
 """
 Méthodes d'export PDF et envoi par email
-À intégrer dans la classe App de main.py
 """
 
 import os
 import glob
 from datetime import datetime
+from collections import defaultdict
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
-from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.enums import TA_CENTER
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
-from email_utils import EmailSender, get_email_config_from_user
-from ui_components import UIComponents
-from constants import SESSION_TIMES
+from email_utils import EmailSender, EmailConfigDialog, create_teacher_email_body, create_email_subject
+from constants import DAY_NAMES_FR
 
 
 class ExportMethods:
-    """Méthodes d'export à ajouter à la classe App"""
+    """Méthodes d'export PDF"""
     
     @staticmethod
     def export_teachers_to_pdf(app_instance, output_folder="exports", send_emails=True):
@@ -28,16 +27,12 @@ class ExportMethods:
         Exporte un PDF pour chaque enseignant avec ses créneaux
         
         Args:
-            app_instance: Instance de la classe App
+            app_instance: Instance de la classe PlanningApp
             output_folder: Dossier de destination
             send_emails: True pour envoyer par email
         """
         if not app_instance.best:
-            UIComponents.show_error_message(
-                app_instance,
-                "❌ Erreur",
-                "Veuillez générer le planning d'abord!"
-            )
+            app_instance.show_error_message("❌ Erreur", "Veuillez générer le planning d'abord!")
             return
         
         # Créer le dossier
@@ -53,22 +48,23 @@ class ExportMethods:
                 print(f"Impossible de supprimer {old_pdf}: {e}")
         
         # Organiser par enseignant
-        from collections import defaultdict
         teacher_slots = defaultdict(list)
         
         for slot in app_instance.best:
             for teacher in app_instance.best[slot]:
                 teacher_slots[teacher].append(slot)
         
-        # Session times reverse
-        SESSION_TIMES_REV = {
+        # Session times pour PDF
+        SESSION_TIMES_PDF = {
             's1': '08:30:00',
             's2': '10:30:00',
             's3': '12:30:00',
             's4': '14:30:00'
         }
-        
+
         pdf_count = 0
+        email_count = 0
+        email_errors = []
         pdfs_to_email = []
         
         # Générer un PDF par enseignant
@@ -94,31 +90,18 @@ class ExportMethods:
             )
             
             elements = []
-            
-            # Header table
-            header_data = [
-                ['GESTION DES EXAMENS ET\nDÉLIBÉRATIONS', 'EXD-FR-08-01'],
-                ["Procédure d'exécution des épreuves", 
-                 f"Date d'approbation\n{datetime.now().strftime('%d-%m-%y')}"],
-                ["Liste d'affectation des surveillants", 'Page 1/1']
-            ]
-            
-            header_table = Table(header_data, colWidths=[14*cm, 4*cm])
-            header_table.setStyle(TableStyle([
-                ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#1e3a8a')),
-                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#e6f0ff')),
-                ('FONT', (0, 0), (-1, -1), 'Helvetica-Bold', 11),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#1e3a8a')),
-            ]))
-            
-            elements.append(header_table)
-            elements.append(Spacer(1, 1*cm))
-            
-            # Styles
-            from reportlab.lib.styles import getSampleStyleSheet
             styles = getSampleStyleSheet()
+            
+            # Styles personnalisés
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontSize=16,
+                textColor=colors.HexColor('#1e3a8a'),
+                spaceAfter=30,
+                alignment=TA_CENTER,
+                fontName='Helvetica-Bold'
+            )
             
             subtitle_style = ParagraphStyle(
                 'CustomSubtitle',
@@ -135,8 +118,28 @@ class ExportMethods:
                 parent=styles['Normal'],
                 fontSize=11,
                 spaceAfter=20,
-                alignment=0  # LEFT
+                alignment=TA_LEFT
             )
+            
+            # Header table
+            header_data = [
+                ['GESTION DES EXAMENS ET\nDÉLIBÉRATIONS', 'EXD-FR-08-01'],
+                ["Procédure d'exécution des épreuves", f"Date d'approbation\n{datetime.now().strftime('%d-%m-%y')}"],
+                ["Liste d'affectation des surveillants", 'Page 1/1']
+            ]
+            
+            header_table = Table(header_data, colWidths=[14*cm, 4*cm])
+            header_table.setStyle(TableStyle([
+                ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#1e3a8a')),
+                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#e6f0ff')),
+                ('FONT', (0, 0), (-1, -1), 'Helvetica-Bold', 11),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#1e3a8a')),
+            ]))
+            
+            elements.append(header_table)
+            elements.append(Spacer(1, 1*cm))
             
             # Titre
             elements.append(Paragraph("Notes à", subtitle_style))
@@ -161,7 +164,7 @@ class ExportMethods:
                     
                     date_obj = datetime.strptime(date_str, '%Y-%m-%d')
                     formatted_date = date_obj.strftime('%Y-%m-%d')
-                    time = SESSION_TIMES_REV.get(session, '08:30:00')
+                    time = SESSION_TIMES_PDF.get(session, '08:30:00')
                     duration = '1.5 H'
                     
                     schedule_data.append([formatted_date, time, duration])
@@ -177,8 +180,7 @@ class ExportMethods:
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                 ('FONT', (0, 1), (-1, -1), 'Helvetica', 11),
                 ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#1e3a8a')),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), 
-                 [colors.HexColor('#e6f0ff'), colors.white])
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#e6f0ff'), colors.white])
             ]))
             
             elements.append(schedule_table)
@@ -197,57 +199,47 @@ class ExportMethods:
                 })
         
         # Envoyer les emails si demandé
-        email_count = 0
-        email_errors = []
-        
         if send_emails and pdfs_to_email:
-            email_config = get_email_config_from_user(app_instance)
+            # Configuration email
+            email_dialog = EmailConfigDialog(app_instance, app_instance.colors)
+            email_config = email_dialog.show()
             
             if email_config:
-                try:
-                    with EmailSender(
-                        email_config['sender_email'],
-                        email_config['password'],
-                        email_config['smtp_server'],
-                        email_config['smtp_port']
-                    ) as sender:
-                        # Préparer la liste pour send_batch_emails
-                        email_list = [
-                            {
-                                'email': pdf_info['email'],
-                                'name': pdf_info['full_name'],
-                                'pdf_path': pdf_info['pdf_path']
-                            }
-                            for pdf_info in pdfs_to_email
-                        ]
-                        
-                        email_count, email_errors = sender.send_batch_emails(email_list)
-                        
-                except Exception as e:
-                    email_errors.append(f"Erreur de connexion: {str(e)}")
+                # Préparation des données d'email
+                emails_data = []
+                for pdf_info in pdfs_to_email:
+                    emails_data.append({
+                        'email': pdf_info['email'],
+                        'subject': create_email_subject(),
+                        'body': create_teacher_email_body(pdf_info['full_name'], pdf_info['teacher_code']),
+                        'attachment_path': pdf_info['pdf_path']
+                    })
+                
+                # Envoi des emails
+                email_sender = EmailSender(
+                    sender_email=email_config['sender_email'],
+                    password=email_config['password'],
+                    smtp_server=email_config['smtp_server'],
+                    smtp_port=email_config['smtp_port']
+                )
+                
+                email_count, email_errors = email_sender.send_bulk_emails(emails_data)
         
         # Message final
         if send_emails:
             if email_errors:
-                error_msg = (f"{pdf_count} PDF(s) générés.\n"
-                           f"{email_count} email(s) envoyés.\n"
-                           f"{len(email_errors)} erreur(s):\n" + 
-                           "\n".join(email_errors[:5]))  # Limiter à 5 erreurs
-                UIComponents.show_error_message(
-                    app_instance,
-                    "⚠️ Export avec erreurs",
-                    error_msg
-                )
+                error_msg = f"{pdf_count} PDF(s) générés.\n{email_count} email(s) envoyés.\n{len(email_errors)} erreur(s):\n" + "\n".join(email_errors[:5])
+                if len(email_errors) > 5:
+                    error_msg += f"\n... et {len(email_errors) - 5} autres erreurs"
+                app_instance.show_error_message("⚠️ Export avec erreurs", error_msg)
             else:
-                UIComponents.show_success_message(
-                    app_instance,
-                    "✅ Export et Envoi Réussis",
-                    f"{pdf_count} PDF(s) générés et\n{email_count} email(s) envoyés!"
+                app_instance.show_success_message(
+                    "✅ Export et Envoi Réussis", 
+                    f"{pdf_count} PDF(s) générés et {email_count} email(s) envoyés!"
                 )
         else:
-            UIComponents.show_success_message(
-                app_instance,
-                "✅ Export Réussi",
+            app_instance.show_success_message(
+                "✅ Export Réussi", 
                 f"{pdf_count} PDF(s) générés dans le dossier '{output_folder}'"
             )
         
@@ -259,15 +251,11 @@ class ExportMethods:
         Exporte un PDF général avec toutes les sessions
         
         Args:
-            app_instance: Instance de la classe App
+            app_instance: Instance de la classe PlanningApp
             output_folder: Dossier de destination
         """
         if not app_instance.best:
-            UIComponents.show_error_message(
-                app_instance,
-                "❌ Erreur",
-                "Veuillez générer le planning d'abord!"
-            )
+            app_instance.show_error_message("❌ Erreur", "Veuillez générer le planning d'abord!")
             return
         
         # Créer le dossier
@@ -283,7 +271,6 @@ class ExportMethods:
                 print(f"Impossible de supprimer {old_pdf}: {e}")
         
         # Organiser par date et session
-        from collections import defaultdict
         sessions_data = defaultdict(lambda: defaultdict(list))
         
         for slot in sorted(app_instance.best.keys()):
@@ -308,9 +295,6 @@ class ExportMethods:
             except:
                 continue
         
-        # Noms des jours en français
-        from constants import DAY_NAMES_FR
-        
         # Session times
         SESSION_TIMES_DISPLAY = {
             'S1': '08:30',
@@ -318,7 +302,7 @@ class ExportMethods:
             'S3': '12:30',
             'S4': '14:30'
         }
-        
+
         # Nom du fichier
         pdf_filename = os.path.join(
             output_folder,
@@ -333,10 +317,9 @@ class ExportMethods:
         )
         
         elements = []
+        styles = getSampleStyleSheet()
         
         # Traiter chaque date et session
-        from reportlab.platypus import PageBreak
-        
         for date_str in sorted(sessions_data.keys()):
             for session in sorted(sessions_data[date_str].keys()):
                 session_info = sessions_data[date_str][session][0]
@@ -375,9 +358,6 @@ class ExportMethods:
                 elements.append(Spacer(1, 0.8*cm))
                 
                 # Titre de la session
-                from reportlab.lib.styles import getSampleStyleSheet
-                styles = getSampleStyleSheet()
-                
                 subtitle_style = ParagraphStyle(
                     'CustomSubtitle',
                     parent=styles['Normal'],
@@ -449,9 +429,8 @@ class ExportMethods:
         # Construire le PDF
         doc.build(elements)
         
-        UIComponents.show_success_message(
-            app_instance,
-            "✅ Export Réussi",
+        app_instance.show_success_message(
+            "✅ Export Réussi", 
             f"PDF général créé:\n{os.path.basename(pdf_filename)}"
         )
         
