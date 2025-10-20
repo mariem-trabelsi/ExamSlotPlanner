@@ -9,10 +9,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
-<<<<<<< HEAD
-=======
 import customtkinter as ctk
->>>>>>> 5f989fa76a2fa3d58d63c63c9501894f6e02fc58
 
 
 class EmailSender:
@@ -31,9 +28,6 @@ class EmailSender:
         self.sender_email = sender_email
         self.password = password
         self.smtp_server = smtp_server
-<<<<<<< HEAD
-        self.smtp_port = smtp_
-=======
         self.smtp_port = smtp_port
     
     def send_email(self, recipient_email, subject, body, attachment_path=None):
@@ -269,4 +263,3 @@ Service des Examens"""
 def create_email_subject():
     """Crée le sujet standard pour les emails"""
     return "Planning de Surveillance - Affectation des Examens"
->>>>>>> 5f989fa76a2fa3d58d63c63c9501894f6e02fc58

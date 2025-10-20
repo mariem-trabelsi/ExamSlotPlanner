@@ -31,9 +31,9 @@ from view_methods import (
     show_by_teacher, show_by_day_calendar, show_by_room,
     show_planning_quality_with_prof_resp, show_prof_responsable_details, assign_teachers_to_rooms
 )
-from pdf_export import (
-    export_teachers_to_pdf,
-)
+# from pdf_export import (
+#     export_teachers_to_pdf,
+# )
 from database import DatabaseManager
 
 # Import des constantes

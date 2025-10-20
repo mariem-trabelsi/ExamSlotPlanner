@@ -414,11 +414,7 @@ def run_ga_optimized(slots, teachers, progress_callback=None):
     MIN_IMPROVEMENT = 1.0
     slots_dict = {slot: data for slot, data in slots}
     pop_size = 200
-<<<<<<< HEAD
     max_generations = 500
-=======
-    max_generations = 300
->>>>>>> 5f989fa76a2fa3d58d63c63c9501894f6e02fc58
     elite_size = int(pop_size * 0.2)
     pop = generate_population(pop_size, slots, teachers)
     best_fitness_history = []
