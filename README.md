@@ -20,7 +20,6 @@ Fonction centrale qui attribue un **score** à chaque solution. Plus le score es
 #### **Contraintes sur le nombre de professeurs par créneau**
 - Chaque créneau doit avoir entre `min_needed` (2 × nombre de salles) et `max_needed` (4 × nombre de salles) professeurs
 - **Pénalité forte** (-500) si le minimum n'est pas respecté
-- **Bonus** (+100) si exactement le minimum est atteint
 
 #### **Pénalité pour doublons**
 - Si un professeur est assigné deux fois au même créneau : **-500 points par doublon**
@@ -49,7 +48,7 @@ Fonction centrale qui attribue un **score** à chaque solution. Plus le score es
 - **Bonus** si répartition uniforme avec gaps consécutifs
 
 #### **Équité par grade**
-- La variance des charges entre professeurs du même grade est **pénalisée** : -200 × variance
+- La variance des charges entre professeurs du même grade est **pénalisée** : -400 × variance
 - Assure une distribution équitable entre les niveaux d'enseignement
 
 ---
@@ -145,16 +144,16 @@ L'algorithme s'arrête selon trois critères implémentés dans **`run_ga_optimi
 
 ### **1. Seuil de fitness optimal**
 ```python
-EARLY_STOP_THRESHOLD = 3000
+EARLY_STOP_THRESHOLD = 5000
 ```
-- Si un individu atteint un score > 3000 → **arrêt immédiat**
+- Si un individu atteint un score > 5000 → **arrêt immédiat**
 - **Raison** : une solution "suffisamment bonne" a été trouvée
 - **Status retourné** : `"optimal"`
 
 ### **2. Stagnation (Plateau de convergence)**
 ```python
-STAGNATION_LIMIT = 100
-MIN_IMPROVEMENT = 1.0
+STAGNATION_LIMIT = 150
+MIN_IMPROVEMENT = 2.0
 ```
 - Si **aucune amélioration significative** (> 1 point) pendant **100 générations** → **arrêt**
 - **Raison** : l'algorithme n'avance plus, continuer ne serait pas productif
@@ -167,7 +166,7 @@ MIN_IMPROVEMENT = 1.0
 
 ### **3. Nombre maximum de générations**
 ```python
-max_generations = 3000
+max_generations = 500
 ```
 - Limite absolue du nombre d'itérations
 - **Status retourné** : `"max_gen"`
