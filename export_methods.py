@@ -1,6 +1,6 @@
 # export_methods.py
 """
-Méthodes d'export PDF et envoi par email
+Méthodes d'export PDF et envoi par email.
 """
 
 import os
