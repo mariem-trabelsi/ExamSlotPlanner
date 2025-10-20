@@ -21,6 +21,7 @@ from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
 import glob
+from email_utils import EmailSender, EmailConfigDialog, create_teacher_email_body, create_email_subject
 
 from genetic_algorithm import (
     run_ga_optimized, fitness, is_valid_teacher, 
@@ -749,54 +750,6 @@ class PlanningApp(ctk.CTk):
             except Exception as e:
                 self.show_error_message("❌ Erreur", f"Erreur lors du chargement des créneaux:\n{str(e)}")
 
-    # def load_teachers(self):
-    #     file = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx *.xls")])
-    #     if file:
-    #         try:
-    #             engine = 'openpyxl' if file.endswith('.xlsx') else 'xlrd'
-    #             df = pd.read_excel(file, engine=engine)
-               
-    #             required_columns = ['email_ens']
-    #             missing_columns = [col for col in required_columns if col not in df.columns]
-    #             if missing_columns:
-    #                 self.show_error_message(
-    #                     "❌ Erreur",
-    #                     f"Le fichier Excel ne contient pas la colonne requise : {', '.join(missing_columns)}"
-    #                 )
-    #                 return
-    #             self.teachers = {}
-    #             counter = 0
-               
-    #             for index, row in df.iterrows():
-    #                 participe = row.get('participe_surveillance', False) in [1, '1', True, 'true', 'True']
-                   
-    #                 email = row.get('email_ens', '')
-    #                 if not email or email in self.teachers:
-    #                     code = f"TEACHER_{index}_{counter}"
-    #                     counter += 1
-    #                 else:
-    #                     code = email
-                   
-    #                 self.teachers[code] = {
-    #                     'nom': row.get('nom_ens', ''),
-    #                     'prenom': row.get('prenom_ens', ''),
-    #                     'abrv': row.get('abrv_ens', ''),
-    #                     'email': email,
-    #                     'grade': row.get('grade_code_ens', ''),
-    #                     'quota': GRADE_QUOTAS.get(row.get('grade_code_ens', ''), 2),
-    #                     'indispo': [],
-    #                     'wish_priority': {},
-    #                     'participe_surveillance': participe,
-    #                     'code_smartex_ens': str(int(row['code_smartex_ens'])) if 'code_smartex_ens' in row and not pd.isna(row['code_smartex_ens']) else ''
-    #                 }
-               
-    #             participating = sum(1 for t in self.teachers.values() if t['participe_surveillance'])
-    #             self.data_loaded['teachers'] = True
-    #             self.update_button_status('teachers', "Charger Enseignants", "👥")
-    #             self.show_success_message("✅ Succès", 
-    #                 f"{len(self.teachers)} enseignants chargés\n({participating} participent à la surveillance)")
-    #         except Exception as e:
-    #             self.show_error_message("❌ Erreur", f"Erreur lors du chargement des enseignants:\n{str(e)}")
 
     def load_teachers(self):
         file = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx *.xls")])
@@ -2156,6 +2109,7 @@ class PlanningApp(ctk.CTk):
             except Exception as e:
                 self.show_error_message("❌ Erreur", f"Erreur lors de l'export CSV:\n{str(e)}")
 
+
     def export_teachers_to_pdf(self, output_folder="exports", send_emails=True):
         """Exporte un PDF pour chaque enseignant avec ses créneaux"""
         if not self.best:
@@ -2310,18 +2264,43 @@ class PlanningApp(ctk.CTk):
                 pdfs_to_email.append({
                     'teacher_code': teacher_code,
                     'full_name': full_name,
-                    'email': "meriem.trabelsi@etudiant-isi.utm.tn",
+                    'email': email,
                     'pdf_path': pdf_filename
                 })
         
+        # PARTIE EMAIL - UTILISATION DE LA NOUVELLE CLASSE
         if send_emails and pdfs_to_email:
-            email_config = self.show_email_config_dialog()
+            # Configuration email
+            email_dialog = EmailConfigDialog(self, self.colors)
+            email_config = email_dialog.show()
+            
             if email_config:
-                email_count, email_errors = self.send_pdfs_via_email(pdfs_to_email, email_config)
+                # Préparation des données d'email
+                emails_data = []
+                for pdf_info in pdfs_to_email:
+                    emails_data.append({
+                        'email': pdf_info['email'],
+                        'subject': create_email_subject(),
+                        'body': create_teacher_email_body(pdf_info['full_name'], pdf_info['teacher_code']),
+                        'attachment_path': pdf_info['pdf_path']
+                    })
+                
+                # Envoi des emails
+                email_sender = EmailSender(
+                    sender_email=email_config['sender_email'],
+                    password=email_config['password'],
+                    smtp_server=email_config['smtp_server'],
+                    smtp_port=email_config['smtp_port']
+                )
+                
+                email_count, email_errors = email_sender.send_bulk_emails(emails_data)
         
+        # Affichage des résultats
         if send_emails:
             if email_errors:
-                error_msg = f"{pdf_count} PDF(s) générés.\n{email_count} email(s) envoyés.\n{len(email_errors)} erreur(s):\n"
+                error_msg = f"{pdf_count} PDF(s) générés.\n{email_count} email(s) envoyés.\n{len(email_errors)} erreur(s):\n" + "\n".join(email_errors[:5])
+                if len(email_errors) > 5:
+                    error_msg += f"\n... et {len(email_errors) - 5} autres erreurs"
                 self.show_error_message("⚠️ Export avec erreurs", error_msg)
             else:
                 self.show_success_message(
@@ -2335,131 +2314,8 @@ class PlanningApp(ctk.CTk):
             )
         
         return pdf_count
-
-    def show_email_config_dialog(self):
-        """Affiche une boîte de dialogue pour configurer l'envoi d'emails"""
-        config_window = ctk.CTkToplevel(self)
-        config_window.title("📧 Configuration Email")
-        config_window.geometry("600x650")
-        config_window.transient(self)
-        config_window.grab_set()
         
-        header = ctk.CTkFrame(config_window, fg_color="#3B82F6", corner_radius=10)
-        header.pack(fill="x", padx=20, pady=20)
-        
-        ctk.CTkLabel(header,
-                    text="📧 Configuration de l'envoi par email",
-                    font=ctk.CTkFont(size=16, weight="bold"),
-                    text_color="white").pack(pady=15)
-        
-        form_frame = ctk.CTkFrame(config_window, fg_color="transparent")
-        form_frame.pack(fill="both", expand=True, padx=30, pady=10)
-        
-        ctk.CTkLabel(form_frame, text="Votre email:", font=ctk.CTkFont(size=12, weight="bold")).pack(anchor="w", pady=(10, 5))
-        email_entry = ctk.CTkEntry(form_frame, width=400, placeholder_text="exemple@gmail.com")
-        email_entry.pack(pady=(0, 15))
-        
-        ctk.CTkLabel(form_frame, text="Mot de passe d'application:", font=ctk.CTkFont(size=12, weight="bold")).pack(anchor="w", pady=(10, 5))
-        password_entry = ctk.CTkEntry(form_frame, width=400, show="*", placeholder_text="Mot de passe")
-        password_entry.pack(pady=(0, 15))
-        
-        ctk.CTkLabel(form_frame, text="Serveur SMTP:", font=ctk.CTkFont(size=12, weight="bold")).pack(anchor="w", pady=(10, 5))
-        smtp_entry = ctk.CTkEntry(form_frame, width=400, placeholder_text="smtp.gmail.com")
-        smtp_entry.insert(0, "smtp.gmail.com")
-        smtp_entry.pack(pady=(0, 15))
-        
-        ctk.CTkLabel(form_frame, text="Port SMTP:", font=ctk.CTkFont(size=12, weight="bold")).pack(anchor="w", pady=(10, 5))
-        port_entry = ctk.CTkEntry(form_frame, width=400, placeholder_text="587")
-        port_entry.insert(0, "587")
-        port_entry.pack(pady=(0, 15))
-        
-        info_text = "💡 Pour Gmail, utilisez un mot de passe d'application\n(Compte Google > Sécurité > Validation en 2 étapes > Mots de passe d'application)"
-        ctk.CTkLabel(form_frame, text=info_text, font=ctk.CTkFont(size=10), 
-                    text_color="gray", wraplength=400).pack(pady=10)
-        
-        result = {}
-        
-        def on_send():
-            if not email_entry.get() or not password_entry.get():
-                self.show_error_message("❌ Erreur", "Veuillez remplir tous les champs!")
-                return
-            
-            result['sender_email'] = email_entry.get()
-            result['password'] = password_entry.get()
-            result['smtp_server'] = smtp_entry.get() or "smtp.gmail.com"
-            result['smtp_port'] = int(port_entry.get() or "587")
-            config_window.destroy()
-        
-        button_frame = ctk.CTkFrame(config_window, fg_color="transparent")
-        button_frame.pack(pady=20)
-        
-        ctk.CTkButton(button_frame, text="📧 Envoyer", command=on_send,
-                    width=150, height=40, fg_color="#10B981", hover_color="#059669").pack(side="left", padx=10)
-        
-        ctk.CTkButton(button_frame, text="❌ Annuler", command=config_window.destroy,
-                    width=150, height=40, fg_color="#6B7280", hover_color="#4B5563").pack(side="left", padx=10)
-        
-        config_window.wait_window()
-        return result if result else None
-
-    def send_pdfs_via_email(self, pdfs_to_email, email_config):
-        """Envoie les PDFs par email à chaque enseignant"""
-        sent_count = 0
-        errors = []
-        
-        sender_email = email_config['sender_email']
-        password = email_config['password']
-        smtp_server = email_config['smtp_server']
-        smtp_port = email_config['smtp_port']
-        
-        try:
-            server = smtplib.SMTP(smtp_server, smtp_port)
-            server.starttls()
-            server.login(sender_email, password)
-            
-            for pdf_info in pdfs_to_email:
-                try:
-                    msg = MIMEMultipart()
-                    msg['From'] = sender_email
-                    msg['To'] = "meriem.trabelsi@etudiant-isi.utm.tn"
-                    msg['Subject'] = "Planning de Surveillance - Affectation des Examens"
-                    
-                    body = f"""Bonjour {pdf_info['full_name']},
-
-    Veuillez trouver ci-joint votre affectation pour la surveillance des examens.
-
-    Merci de bien vouloir consulter le document PDF en pièce jointe.
-
-    Cordialement,
-    Service des Examens"""
-                    
-                    msg.attach(MIMEText(body, 'plain', 'utf-8'))
-                    
-                    with open(pdf_info['pdf_path'], 'rb') as attachment:
-                        part = MIMEBase('application', 'octet-stream')
-                        part.set_payload(attachment.read())
-                        encoders.encode_base64(part)
-                        part.add_header('Content-Disposition', 
-                                    f"attachment; filename= {os.path.basename(pdf_info['pdf_path'])}")
-                        msg.attach(part)
-                    
-                    server.send_message(msg)
-                    sent_count += 1
-                    print(f"Email sent to {pdf_info['email']}")
-                    
-                except Exception as e:
-                    error_msg = f"{pdf_info['full_name']}: {str(e)}"
-                    errors.append(error_msg)
-                    print(f"Error sending to {pdf_info['email']}: {e}")
-            
-            server.quit()
-            
-        except Exception as e:
-            errors.append(f"Erreur de connexion SMTP: {str(e)}")
-            print(f"SMTP connection error: {e}")
-        
-        return sent_count, errors
-
+    
     def export_general_pdf(self, output_folder="exports"):
         """Exporte un PDF général avec toutes les sessions et leurs enseignants"""
         if not self.best:
