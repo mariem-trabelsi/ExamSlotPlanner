@@ -45,11 +45,11 @@ Fonction centrale qui attribue un **score** à chaque solution. Plus le score es
 
 #### **Dispersion des créneaux**
 - Les créneaux de chaque professeur doivent être bien répartis sur plusieurs jours
-- **Pénalité** si > 3 jours
+- **Pénalité** si > 2 jours
 - **Bonus** si répartition uniforme avec gaps consécutifs
 
 #### **Équité par grade**
-- La variance des charges entre professeurs du même grade est **pénalisée** : -50 × variance
+- La variance des charges entre professeurs du même grade est **pénalisée** : -200 × variance
 - Assure une distribution équitable entre les niveaux d'enseignement
 
 ---
