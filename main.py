@@ -4,23 +4,10 @@ import customtkinter as ctk
 import pandas as pd
 from datetime import datetime, timedelta
 from collections import defaultdict
-from PIL import Image, ImageTk
-import json
-from reportlab.lib.pagesizes import A4
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 from reportlab.pdfgen import canvas
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
-import os
 from login import LoginApp
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.base import MIMEBase
-from email import encoders
-import glob
 from email_utils import EmailSender, EmailConfigDialog, create_teacher_email_body, create_email_subject
 from genetic_algorithm import (
     run_ga_optimized, fitness, is_valid_teacher, 
@@ -188,21 +175,6 @@ class PlanningApp(ctk.CTk):
             command=lambda: self.export_general_pdf()
         )
         export_general_btn.pack(side='left', padx=5)
-        
-        self.quality_btn = ctk.CTkButton(
-            buttons_container,
-            text="Qualité Planning",
-            width=150,
-            height=40,
-            corner_radius=10,
-            text_color="black",
-            fg_color=self.colors['success'] if self.current_view == 'quality' else 'transparent',
-            hover_color=self.colors['hover'],
-            border_width=2,
-            border_color=self.colors['success'],
-            command=lambda: self.switch_view('quality')
-        )
-        self.quality_btn.pack(side='left', padx=5)
 
     def create_section(self, parent, title, top_padding):
         ctk.CTkLabel(
