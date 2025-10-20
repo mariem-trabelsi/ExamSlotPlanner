@@ -22,7 +22,7 @@ Fonction centrale qui attribue un **score** à chaque solution. Plus le score es
 - **Pénalité forte** (-500) si le minimum n'est pas respecté
 
 #### **Pénalité pour doublons**
-- Si un professeur est assigné deux fois au même créneau : **-500 points par doublon**
+- Si un professeur est assigné deux fois au même créneau : **-500 points par doublon**F
 
 #### **Respect des indisponibilités**
 - Si un professeur est assigné à un créneau où il est indisponible : **-2000 × priorité du souhait**
@@ -288,11 +288,11 @@ GÉNÉRATION n
 | Paramètre | Valeur | Description |
 |-----------|--------|-------------|
 | `pop_size` | 200 | Taille de la population par génération |
-| `max_generations` | 300 | Nombre maximal de générations |
+| `max_generations` | 500 | Nombre maximal de générations |
 | `elite_size` | 20% | Proportion d'élites conservées |
-| `EARLY_STOP_THRESHOLD` | 3000 | Score fitness pour arrêt optimal |
-| `STAGNATION_LIMIT` | 100 | Générations sans amélioration avant arrêt |
-| `MIN_IMPROVEMENT` | 1.0 | Seuil minimum d'amélioration |
+| `EARLY_STOP_THRESHOLD` | 5000 | Score fitness pour arrêt optimal |
+| `STAGNATION_LIMIT` | 150 | Générations sans amélioration avant arrêt |
+| `MIN_IMPROVEMENT` | 2.0 | Seuil minimum d'amélioration |
 | `tournament_size` | 10 | Taille du tournoi de sélection |
 
 ---
@@ -310,6 +310,12 @@ GÉNÉRATION n
 **Résultat** : un planning viable, équitable et respectant les contraintes majeure
 
 ---
+## Prérequis
+Assurez-vous d'avoir Python installé. Vérifiez avec :
+```bash
+  python --version
+```
+
 ## 🧚‍♀️ Installation & exécution du projet
 Suivez ces étapes pour cloner et exécuter l'application :
 
@@ -339,24 +345,22 @@ Suivez ces étapes pour cloner et exécuter l'application :
    ```bash
    python main.py
    ```
-## Prérequis
-Assurez-vous d'avoir Python installé. Vérifiez avec :
-```bash
-  python --version
-```
+
 ## Login
 
 **usename** : admin
 **password** admin12
 
-option: chnager le mot de passe
+Avec option de chnager le mot de passe
 
 ## Chargement des données
 
 **chargement des enseignants (enseignant-20251017-New.xlsx)**
 <img width="996" height="357" alt="image" src="https://github.com/user-attachments/assets/74930be9-5346-40d0-9c7d-6951629f2e0d" />
+
 **chargement des répartitions (Répartition-SE-Salles-Dates-et-Séances-et-code-ensiegnts-responsables.xlsx)**
 <img width="1014" height="346" alt="image" src="https://github.com/user-attachments/assets/5f4293ca-43a4-4ad3-affc-b432b5c0865f" />
+
 **chargements des voeux d'indisponibilé (souhait_surveillance--modifié.xlsx)** (nous avons changé les jours (lundi,mardi..) par des numéros pour éviter problème d'une session sur deux semaines..
 <img width="720" height="391" alt="image" src="https://github.com/user-attachments/assets/d8f6ba69-8d47-46a2-9e05-affd03ba0aca" />
 
