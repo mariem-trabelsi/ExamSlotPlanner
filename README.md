@@ -319,36 +319,42 @@ Suivez ces étapes pour cloner et exécuter l'application :
    git clone https://github.com/mariem-trabelsi/ExamSlotPlanner.git
    cd ExamSlotPlanner
    ```
-2. **Supprimer l'environnement virtuel existant :** :
+2. **Créer un environnement virtuel** :
    ```bash
-   rm -rf env_surveillance
+   python -m venv venv
    ```
-
-3. **Créer un environnement virtuel** :
-   ```bash
-   python3.11 -m venv venv
-   ```
-4. **Activer l'environnement virtuel** :
+3. **Activer l'environnement virtuel** :
    Sur windows:
    ```bash
     venv\Scripts\activate
    ```
-
     Sur Linux/Mac ::
    ```bash
     source venv/bin/activate
    ```
-5. **Installer les dépendances** :
+4. **Installer les dépendances** :
  ```bash
    pip install -r requirements.txt
 ```
-6. **Exécuter l'application** :
+5. **Exécuter l'application** :
    ```bash
    python main.py
    ```
 ## Prérequis
-Assurez-vous d'avoir Python (**version 3.11**) installé. Vérifiez avec :
+Assurez-vous d'avoir Python installé. Vérifiez avec :
 ```bash
   python --version
 ```
+## Chargement des données
+**chargement des enseignants (enseignant-20251017-New.xlsx)**
+<img width="996" height="357" alt="image" src="https://github.com/user-attachments/assets/74930be9-5346-40d0-9c7d-6951629f2e0d" />
+**chargement des répartitions (Répartition-SE-Salles-Dates-et-Séances-et-code-ensiegnts-responsables.xlsx)**
+<img width="1014" height="346" alt="image" src="https://github.com/user-attachments/assets/5f4293ca-43a4-4ad3-affc-b432b5c0865f" />
+**chargements des voeux d'indisponibilé (souhait_surveillance--modifié.xlsx)** (nous avons changé les jours (lundi,mardi..) par des numéros pour éviter problème d'une session sur deux semaines..
+<img width="720" height="391" alt="image" src="https://github.com/user-attachments/assets/d8f6ba69-8d47-46a2-9e05-affd03ba0aca" />
+
+
+
+
+
    
