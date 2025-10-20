@@ -363,12 +363,14 @@ option: chnager le mot de passe
 
 <img width="720" height="391" alt="image" src="https://github.com/user-attachments/assets/323184e6-ae7f-4164-ba7a-103f7b843daf" />
 
+
 <img width="1434" height="783" alt="image" src="https://github.com/user-attachments/assets/946fa7f4-5aa3-458f-8741-3213537ed4a8" />
 
+## Les créneaux d'un enseignaant
 
 <img width="1420" height="772" alt="image" src="https://github.com/user-attachments/assets/15e2a762-fac2-49ef-8615-df7368165e1f" />
 
-
+## Barre  de recherche 
 <img width="640" height="366" alt="image" src="https://github.com/user-attachments/assets/402af4bc-a98f-4eba-a736-8c0bbbf5d0b8" />
 
 
