@@ -347,7 +347,7 @@ Suivez ces étapes pour cloner et exécuter l'application :
    python main.py
    ```
 ## Prérequis
-Assurez-vous d'avoir Python (version 3.11) installé. Vérifiez avec :
+Assurez-vous d'avoir Python (**version 3.11**) installé. Vérifiez avec :
 ```bash
   python --version
 ```
