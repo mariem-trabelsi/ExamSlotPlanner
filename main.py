@@ -801,68 +801,65 @@ class PlanningApp(ctk.CTk):
                 self.show_error_message("❌ Erreur", f"Erreur lors du chargement des enseignants:\n{str(e)}")
 
     def load_wishes(self):
-      file = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx *.xls")])
-      if file:
-        if not self.day_to_date:
-            self.show_error_message("❌ Erreur", "Chargez d'abord les créneaux!")
-            return
-        try:
-            engine = 'openpyxl' if file.endswith('.xlsx') else 'xlrd'
-            df = pd.read_excel(file, engine=engine)
-            df = df.drop_duplicates(subset=['Enseignant', 'Jour', 'Séances'], keep='first')   
+        file = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx *.xls")])
+        if file:
+            if not self.day_to_date:
+                self.show_error_message("❌ Erreur", "Chargez d'abord les créneaux!")
+                return
+            try:
+                engine = 'openpyxl' if file.endswith('.xlsx') else 'xlrd'
+                df = pd.read_excel(file, engine=engine)
+                df = df.drop_duplicates(subset=['Enseignant', 'Jour', 'Séances'], keep='first')  
 
-            if 'ordre_arrivee' in df.columns or 'timestamp' in df.columns:
-                sort_col = 'ordre_arrivee' if 'ordre_arrivee' in df.columns else 'timestamp'
-                df = df.sort_values(sort_col)
-           
-            loaded_count = 0
-            affected_abrvs = set()
-
-            for idx, row in df.iterrows():
-                ens_abrv = str(row.get('Enseignant', '')).strip()
-                print(ens_abrv)
-                print("loula wfet")
-                if not ens_abrv:
-                    continue
-               
-                # Trouver la clé de l'enseignant par abréviation
-                teacher_key = next((k for k, v in self.teachers.items() if v.get('abrv', '') == ens_abrv), None)
-                print(teacher_key)
-                if not teacher_key:
-                    continue  # Pas d'enseignant correspondant
-               
+                if 'ordre_arrivee' in df.columns or 'timestamp' in df.columns:
+                    sort_col = 'ordre_arrivee' if 'ordre_arrivee' in df.columns else 'timestamp'
+                    df = df.sort_values(sort_col)
+            
                 loaded_count = 0
                 affected_abrvs = set()
-               
-                # Gérer les jours (assumer un seul jour par ligne)
-                jour_str = str(int(row['Jour'])) if pd.notna(row.get('Jour')) else None
-               
-                # Gérer les séances (peut être multiples, séparées par virgule)
-                seance_str = str(row.get('Séances', '')).strip()
-                seances = [s.strip() for s in seance_str.split(',') if s.strip()]
-               
-                if jour_str and seances:
-                    date = self.day_to_date.get(jour_str)
-                    if date:
-                        for seance in seances:
-                            slot = f"{date} {seance}"
-                            if slot not in self.teachers[teacher_key]['indispo']:
-                                self.teachers[teacher_key]['indispo'].append(slot)
-                                priority = 2.0 - (idx / max(len(df), 1))
-                                self.teachers[teacher_key]['wish_priority'][slot] = priority
-                                loaded_count += 1
-                        affected_abrvs.add(ens_abrv)
-           
-            # messagebox.showinfo("Succes",
-            #                   f"{loaded_count} voeux chargés pour {len(affected_abrvs)} enseignants\n"
-            #                   f"Priorités appliquées (premiers arrivés mieux protégés)")
-            self.data_loaded['wishes'] = True
-            self.update_button_status('wishes', "Charger Voeux", "💭")
-            self.show_success_message("✅ Succès", 
-                    f"Voeux chargés: {loaded_count} indisponibilités\npour {len(affected_abrvs)} enseignants")
-        except Exception as e:
-            self.show_error_message("❌ Erreur", f"Erreur lors du chargement des voeux:\n{str(e)}")
 
+                for idx, row in df.iterrows():
+                    ens_abrv = str(row.get('Enseignant', '')).strip()
+
+                    if not ens_abrv:
+                        continue
+                
+                    # Trouver la clé de l'enseignant par abréviation
+                    teacher_key = next((k for k, v in self.teachers.items() if v.get('abrv', '') == ens_abrv), None)
+                    if not teacher_key:
+                        continue  # Pas d'enseignant correspondant
+                
+                    if 'wish_priority' not in self.teachers[teacher_key]:
+                        self.teachers[teacher_key]['wish_priority'] = {}
+                
+                    # Gérer les jours (assumer un seul jour par ligne)
+                    jour_str = str(int(row['Jour'])) if pd.notna(row.get('Jour')) else None
+                
+                    # Gérer les séances (peut être multiples, séparées par virgule)
+                    seance_str = str(row.get('Séances', '')).strip()
+                    seances = [s.strip() for s in seance_str.split(',') if s.strip()]
+                
+                    if jour_str and seances:
+                        date = self.day_to_date.get(jour_str)
+                        if date:
+                            for seance in seances:
+                                slot = f"{date} {seance}"
+                                if slot not in self.teachers[teacher_key]['indispo']:
+                                    self.teachers[teacher_key]['indispo'].append(slot)
+                                    priority = 2.0 - (idx / max(len(df), 1))
+                                    self.teachers[teacher_key]['wish_priority'][slot] = priority
+                                    loaded_count += 1
+                            affected_abrvs.add(ens_abrv)
+            
+                # messagebox.showinfo("Succes",
+                #                   f"{loaded_count} voeux chargés pour {len(affected_abrvs)} enseignants\n"
+                #                   f"Priorités appliquées (premiers arrivés mieux protégés)")
+                self.data_loaded['wishes'] = True
+                self.update_button_status('wishes', "Charger Voeux", "💭")
+                self.show_success_message("✅ Succès",
+                        f"Voeux chargés: {loaded_count} indisponibilités\npour {len(affected_abrvs)} enseignants")
+            except Exception as e:
+                self.show_error_message("❌ Erreur", f"Erreur lors du chargement des voeux:\n{str(e)}")
     def configure_quotas(self):
         """Ouvre la fenêtre de configuration des quotas"""
         if self.quota_window and self.quota_window.winfo_exists():

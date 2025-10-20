@@ -177,7 +177,7 @@ def fitness(assignment, teachers, slots_dict):
         
         # Contraintes sur le nombre de profs
         if len(unique_assigned) < min_needed:
-            score -= 300 * (min_needed - len(unique_assigned)) ** 2
+            score -= 200 * (min_needed - len(unique_assigned)) ** 2
         elif len(unique_assigned) > max_needed:
             score -= 500 * (len(unique_assigned) - max_needed) ** 2
         elif len(unique_assigned) == min_needed:
@@ -225,7 +225,7 @@ def fitness(assignment, teachers, slots_dict):
     
     # Équité par grade
     total_variance = calculate_grade_equity(counts, teachers)
-    score -= 200 * total_variance
+    score -= 325 * total_variance
     
     return score
 
