@@ -1409,21 +1409,25 @@ class App(ctk.CTk):
         try:
             engine = 'openpyxl' if file.endswith('.xlsx') else 'xlrd'
             df = pd.read_excel(file, engine=engine)
-           
+            df = df.drop_duplicates(subset=['Enseignant', 'Jour', 'Séances'], keep='first')   
+
             if 'ordre_arrivee' in df.columns or 'timestamp' in df.columns:
                 sort_col = 'ordre_arrivee' if 'ordre_arrivee' in df.columns else 'timestamp'
                 df = df.sort_values(sort_col)
            
             loaded_count = 0
             affected_abrvs = set()
-           
+
             for idx, row in df.iterrows():
                 ens_abrv = str(row.get('Enseignant', '')).strip()
+                print(ens_abrv)
+                print("loula wfet")
                 if not ens_abrv:
                     continue
                
                 # Trouver la clé de l'enseignant par abréviation
                 teacher_key = next((k for k, v in self.teachers.items() if v.get('abrv', '') == ens_abrv), None)
+                print(teacher_key)
                 if not teacher_key:
                     continue  # Pas d'enseignant correspondant
                
@@ -1431,10 +1435,10 @@ class App(ctk.CTk):
                     self.teachers[teacher_key]['wish_priority'] = {}
                
                 # Gérer les jours (assumer un seul jour par ligne)
-                jour_str = str(int(row['jour'])) if pd.notna(row.get('jour')) else None
+                jour_str = str(int(row['Jour'])) if pd.notna(row.get('Jour')) else None
                
                 # Gérer les séances (peut être multiples, séparées par virgule)
-                seance_str = str(row.get('seance', '')).strip()
+                seance_str = str(row.get('Séances', '')).strip()
                 seances = [s.strip() for s in seance_str.split(',') if s.strip()]
                
                 if jour_str and seances:
@@ -3833,26 +3837,26 @@ class App(ctk.CTk):
 
 if __name__ == "__main__":
     # Lancer la fenêtre de login
-    app = LoginApp()
+    # app = LoginApp()
 
-    def after_login():
-        try:
-            app.destroy()  # Ferme la fenêtre de login
-        except:
-            pass  # Ignorer les erreurs de destruction
+    # def after_login():
+    #     try:
+    #         app.destroy()  # Ferme la fenêtre de login
+    #     except:
+    #         pass  # Ignorer les erreurs de destruction
             
-        # Lancer l'application principale
-        main_app = App()
-        main_app.mainloop()
+    #     # Lancer l'application principale
+    main_app = App()
+    main_app.mainloop()
 
-    # Remplacer la méthode existante avec gestion d'erreur
-    def safe_open_main_app():
-        try:
-            after_login()
-        except Exception as e:
-            print(f"Error during login transition: {e}")
-            # Fallback: lancer l'app principale même en cas d'erreur
-            App().mainloop()
+    # # Remplacer la méthode existante avec gestion d'erreur
+    # def safe_open_main_app():
+    #     try:
+    #         after_login()
+    #     except Exception as e:
+    #         print(f"Error during login transition: {e}")
+    #         # Fallback: lancer l'app principale même en cas d'erreur
+    #         App().mainloop()
 
-    app.open_main_application = safe_open_main_app
-    app.mainloop()
+    # app.open_main_application = safe_open_main_app
+    # app.mainloop()
