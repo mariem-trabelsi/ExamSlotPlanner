@@ -22,7 +22,6 @@ from email.mime.base import MIMEBase
 from email import encoders
 import glob
 from email_utils import EmailSender, EmailConfigDialog, create_teacher_email_body, create_email_subject
-from export_methods import ExportMethods
 from genetic_algorithm import (
     run_ga_optimized, fitness, is_valid_teacher, 
     SESSION_TIMES
@@ -31,9 +30,7 @@ from view_methods import (
     show_by_teacher, show_by_day_calendar, show_by_room,
     show_planning_quality_with_prof_resp, show_prof_responsable_details, assign_teachers_to_rooms
 )
-# from pdf_export import (
-#     export_teachers_to_pdf,
-# )
+from export_methods import ExportMethods
 from database import DatabaseManager
 
 # Import des constantes

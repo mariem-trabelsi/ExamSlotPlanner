@@ -20,7 +20,6 @@ from constants import DAY_NAMES_FR
 
 class ExportMethods:
     """Méthodes d'export PDF"""
-    
     @staticmethod
     def export_teachers_to_pdf(app_instance, output_folder="exports", send_emails=True):
         """
@@ -435,3 +434,6 @@ class ExportMethods:
         )
         
         return pdf_filename
+    
+
+
