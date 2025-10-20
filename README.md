@@ -366,11 +366,11 @@ option: chnager le mot de passe
 
 <img width="1434" height="783" alt="image" src="https://github.com/user-attachments/assets/946fa7f4-5aa3-458f-8741-3213537ed4a8" />
 
-## Les créneaux d'un enseignaant
+## Les créneaux d'un enseignaant avec ses voeux d'indisponibilté
 
 <img width="1420" height="772" alt="image" src="https://github.com/user-attachments/assets/15e2a762-fac2-49ef-8615-df7368165e1f" />
 
-## Barre  de recherche 
+## Barre  de recherche pour le filtrage 
 <img width="640" height="366" alt="image" src="https://github.com/user-attachments/assets/402af4bc-a98f-4eba-a736-8c0bbbf5d0b8" />
 
 
