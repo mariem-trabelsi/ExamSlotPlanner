@@ -352,6 +352,7 @@ Assurez-vous d'avoir Python installé. Vérifiez avec :
 option: chnager le mot de passe
 
 ## Chargement des données
+
 **chargement des enseignants (enseignant-20251017-New.xlsx)**
 <img width="996" height="357" alt="image" src="https://github.com/user-attachments/assets/74930be9-5346-40d0-9c7d-6951629f2e0d" />
 **chargement des répartitions (Répartition-SE-Salles-Dates-et-Séances-et-code-ensiegnts-responsables.xlsx)**
