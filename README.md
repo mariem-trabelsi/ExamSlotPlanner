@@ -1,4 +1,4 @@
-# 🧬 Algorithme Génétique - Optimisation du Planning de Surveillance
+# 🧬 Algorithme Génétique - Optimisation du Planning de Surveillance - Démo
 
 ## 🧚‍♀️ Vue d'ensemble
 
