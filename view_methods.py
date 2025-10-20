@@ -1,6 +1,7 @@
 import numpy as np
 from datetime import datetime
 import random
+from collections import defaultdict
 from genetic_algorithm import (
     is_valid_teacher, get_teacher_slots, check_gap_violations,
     calculate_quota_violations, fitness, SESSION_TIMES, SESSION_ORDER
@@ -103,81 +104,225 @@ def check_prof_responsable_presence_simple(app):
     return results
 
 
+# def show_prof_responsable_details(app):
+#     """Vue detaillee des profs responsables - SIMPLIFIE"""
+#     if not app.best:
+#         from tkinter import messagebox
+#         messagebox.showerror("Erreur", "Generez le planning d'abord!")
+#         return
+    
+#     prof_resp_results = check_prof_responsable_presence_simple(app)
+    
+#     if not prof_resp_results:
+#         from tkinter import messagebox
+#         messagebox.showwarning("Info", "Aucun prof responsable defini dans les creneaux")
+#         return
+    
+#     app.tree.delete(*app.tree.get_children())
+#     app.tree["columns"] = ("Date", "Debut", "Fin", "Session", "Type", "Semestre", "Prof", "Salle", "Statut")
+    
+#     app.tree.heading("Date", text="Date Exam")
+#     app.tree.heading("Debut", text="H Debut")
+#     app.tree.heading("Fin", text="H Fin")
+#     app.tree.heading("Session", text="Session")
+#     app.tree.heading("Type", text="Type Ex")
+#     app.tree.heading("Semestre", text="Semestre")
+#     app.tree.heading("Prof", text="Enseignant")
+#     app.tree.heading("Salle", text="Salle")
+#     app.tree.heading("Statut", text="Present?")
+    
+#     app.tree.column("Date", width=120)
+#     app.tree.column("Debut", width=100)
+#     app.tree.column("Fin", width=100)
+#     app.tree.column("Session", width=80)
+#     app.tree.column("Type", width=80)
+#     app.tree.column("Semestre", width=120)
+#     app.tree.column("Prof", width=180)
+#     app.tree.column("Salle", width=80)
+#     app.tree.column("Statut", width=100)
+    
+#     # Sorting with proper date parsing (assuming date_exam is dd/mm/yyyy)
+#     def sort_key(x):
+#         try:
+#             date_obj = datetime.strptime(x['date_exam'], '%d/%m/%Y')
+#         except:
+#             date_obj = datetime.min
+#         try:
+#             time_obj = datetime.strptime(x['h_debut'], '%H:%M:%S')
+#         except:
+#             time_obj = datetime.min.time()
+#         return (date_obj, time_obj, x['nom'], x['cod_salle'])
+    
+#     sorted_results = sorted(prof_resp_results, key=sort_key)
+    
+#     for result in sorted_results:
+#         status = "PRESENT" if result['present'] else "ABSENT"
+#         tag = "present" if result['present'] else "absent"
+#         app.tree.insert("", "end", 
+#                         values=(result['date_exam'], result['h_debut'], result['h_fin'], 
+#                                 result['session'], result['type_ex'], result['semestre'], 
+#                                 result['nom'], result['cod_salle'], status),
+#                         tags=(tag,))
+    
+#     app.tree.tag_configure("present", background="#ccffcc", foreground="#006600")
+#     app.tree.tag_configure("absent", background="#ffcccc", foreground="#990000")
+    
+#     # Calculate assignments for rate (over total lines, including redundancies)
+#     total = len(prof_resp_results)
+#     presents = sum(1 for r in prof_resp_results if r['present'])
+#     absents = total - presents
+#     taux = (presents / total * 100) if total > 0 else 0
+    
+#     resume = f"TOTAL: {total} | PRESENTS: {presents} ({taux:.1f}%) | ABSENTS: {absents}"
+#     app.view_type_label.config(text=f"Vue: Enseignants Responsables | {resume}")
+#     app.current_view = "prof_responsable"
+#     app.configure_action_buttons()
+
 def show_prof_responsable_details(app):
-    """Vue detaillee des profs responsables - SIMPLIFIE"""
+    """Vue moderne et simplifiée des profs responsables"""
     if not app.best:
-        from tkinter import messagebox
-        messagebox.showerror("Erreur", "Generez le planning d'abord!")
+        app.show_error_message("❌ Erreur", "Veuillez générer le planning d'abord!")
         return
     
+    # Import the check function (adjust the import based on your file structure)
     prof_resp_results = check_prof_responsable_presence_simple(app)
     
     if not prof_resp_results:
-        from tkinter import messagebox
-        messagebox.showwarning("Info", "Aucun prof responsable defini dans les creneaux")
+        app.show_error_message("⚠️ Info", "Aucun prof responsable défini dans les créneaux")
         return
     
+    from datetime import datetime
+    from collections import defaultdict
+    
     app.tree.delete(*app.tree.get_children())
-    app.tree["columns"] = ("Date", "Debut", "Fin", "Session", "Type", "Semestre", "Prof", "Salle", "Statut")
+    app.tree["columns"] = ("Date", "Sessions", "Enseignant", "Présent")
     
-    app.tree.heading("Date", text="Date Exam")
-    app.tree.heading("Debut", text="H Debut")
-    app.tree.heading("Fin", text="H Fin")
-    app.tree.heading("Session", text="Session")
-    app.tree.heading("Type", text="Type Ex")
-    app.tree.heading("Semestre", text="Semestre")
-    app.tree.heading("Prof", text="Enseignant")
-    app.tree.heading("Salle", text="Salle")
-    app.tree.heading("Statut", text="Present?")
+    # Configure columns with modern styling
+    cols = {
+        "Date": {"width": 250, "text": "📅 Date Examen", "anchor": "w"},
+        "Sessions": {"width": 350, "text": "🕐 Sessions", "anchor": "w"},
+        "Enseignant": {"width": 300, "text": "👤 Enseignant Responsable", "anchor": "w"},
+        "Présent": {"width": 150, "text": "✓ Statut", "anchor": "center"}
+    }
     
-    app.tree.column("Date", width=120)
-    app.tree.column("Debut", width=100)
-    app.tree.column("Fin", width=100)
-    app.tree.column("Session", width=80)
-    app.tree.column("Type", width=80)
-    app.tree.column("Semestre", width=120)
-    app.tree.column("Prof", width=180)
-    app.tree.column("Salle", width=80)
-    app.tree.column("Statut", width=100)
+    for col, config in cols.items():
+        app.tree.heading(col, text=config["text"])
+        app.tree.column(col, width=config["width"], anchor=config["anchor"])
     
-    # Sorting with proper date parsing (assuming date_exam is dd/mm/yyyy)
-    def sort_key(x):
+    # Group results by date and teacher
+    grouped_data = defaultdict(lambda: defaultdict(list))
+    
+    for result in prof_resp_results:
+        date_exam = result['date_exam']
+        teacher_code = result.get('cod_ens', '')
+        
+        # Get teacher name from code
+        teacher_name = result.get('nom', f"#{teacher_code}")
+        if teacher_code and str(teacher_code) in app.teachers:
+            teacher_name = get_teacher_display_name(teacher_code,app.teachers)
+            
+        grouped_data[date_exam][teacher_name].append({
+            'session': result.get('session', ''),
+            'h_debut': result.get('h_debut', ''),
+            'salle': result.get('cod_salle', ''),
+            'present': result.get('present', False)
+        })
+    
+    # Day names in French
+    DAY_NAMES_FR = {
+        'Monday': 'Lundi',
+        'Tuesday': 'Mardi',
+        'Wednesday': 'Mercredi',
+        'Thursday': 'Jeudi',
+        'Friday': 'Vendredi',
+        'Saturday': 'Samedi',
+        'Sunday': 'Dimanche'
+    }
+    
+    # Insert grouped data
+    total_entries = 0
+    presents_count = 0
+    absents_count = 0
+    
+    for date_str in sorted(grouped_data.keys()):
+        # Format date with day name
         try:
-            date_obj = datetime.strptime(x['date_exam'], '%d/%m/%Y')
+            date_obj = datetime.strptime(date_str, '%d/%m/%Y')
+            day_name = DAY_NAMES_FR.get(date_obj.strftime('%A'), '')
+            formatted_date = f"{day_name} {date_str}"
         except:
-            date_obj = datetime.min
-        try:
-            time_obj = datetime.strptime(x['h_debut'], '%H:%M:%S')
-        except:
-            time_obj = datetime.min.time()
-        return (date_obj, time_obj, x['nom'], x['cod_salle'])
+            formatted_date = date_str
+        
+        # Create parent for this date
+        date_parent = app.tree.insert("", "end", 
+                                      values=(f"📅 {formatted_date}", "", "", ""),
+                                      tags=('date_group',),
+                                      open=True)
+        
+        for teacher_name in sorted(grouped_data[date_str].keys()):
+            sessions_list = grouped_data[date_str][teacher_name]
+            
+            # Format sessions info
+            sessions_info = []
+            all_present = True
+            any_absent = False
+            
+            for session_data in sorted(sessions_list, key=lambda x: x['h_debut']):
+                session = session_data['session']
+                time = session_data['h_debut'][:5] if len(session_data['h_debut']) >= 5 else session_data['h_debut']
+                salle = session_data['salle']
+                present = session_data['present']
+                
+                if present:
+                    presents_count += 1
+                else:
+                    absents_count += 1
+                    all_present = False
+                    any_absent = True
+                
+                total_entries += 1
+                
+                # Format: "S1 (08:30) - Salle A101"
+                session_text = f"{session} ({time})"
+                if salle:
+                    session_text += f" - Salle {salle}"
+                sessions_info.append(session_text)
+            
+            sessions_display = " | ".join(sessions_info)
+            
+            # Determine status
+            if all_present:
+                status = "✅ Présent"
+                tag = "present"
+            elif any_absent:
+                status = "❌ Absent"
+                tag = "absent"
+            else:
+                status = "⚠️ Inconnu"
+                tag = "warning"
+            
+            # Insert teacher row as child of date
+            app.tree.insert(date_parent, "end",
+                           values=("", sessions_display, teacher_name, status),
+                           tags=(tag,))
     
-    sorted_results = sorted(prof_resp_results, key=sort_key)
+    # Configure tag colors
+    app.tree.tag_configure("date_group", background="#E5E7EB", 
+                           font=("Segoe UI", 11, "bold"))
+    app.tree.tag_configure("present", background="#D1FAE5", foreground="#065F46")
+    app.tree.tag_configure("absent", background="#FEE2E2", foreground="#991B1B")
+    app.tree.tag_configure("warning", background="#FEF3C7", foreground="#92400E")
     
-    for result in sorted_results:
-        status = "PRESENT" if result['present'] else "ABSENT"
-        tag = "present" if result['present'] else "absent"
-        app.tree.insert("", "end", 
-                        values=(result['date_exam'], result['h_debut'], result['h_fin'], 
-                                result['session'], result['type_ex'], result['semestre'], 
-                                result['nom'], result['cod_salle'], status),
-                        tags=(tag,))
+    # Calculate statistics
+    taux_presence = (presents_count / total_entries * 100) if total_entries > 0 else 0
+    taux_absence = (absents_count / total_entries * 100) if total_entries > 0 else 0
     
-    app.tree.tag_configure("present", background="#ccffcc", foreground="#006600")
-    app.tree.tag_configure("absent", background="#ffcccc", foreground="#990000")
-    
-    # Calculate assignments for rate (over total lines, including redundancies)
-    total = len(prof_resp_results)
-    presents = sum(1 for r in prof_resp_results if r['present'])
-    absents = total - presents
-    taux = (presents / total * 100) if total > 0 else 0
-    
-    resume = f"TOTAL: {total} | PRESENTS: {presents} ({taux:.1f}%) | ABSENTS: {absents}"
-    app.view_type_label.config(text=f"Vue: Enseignants Responsables | {resume}")
-    app.current_view = "prof_responsable"
-    app.configure_action_buttons()
-
-
+    # Update summary if exists
+    if hasattr(app, 'summary_label'):
+        summary_text = (f"📊 Total: {total_entries} créneaux | "
+                       f"✅ {presents_count} présents ({taux_presence:.1f}%) | "
+                       f"❌ {absents_count} absents ({taux_absence:.1f}%)")
+        app.summary_label.configure(text=summary_text)
 
 
 
@@ -412,105 +557,342 @@ def show_by_room(app):
 
 
 
+# def show_planning_quality_with_prof_resp(app):
+#     """Affiche qualite + info prof responsable"""
+#     if not app.best:
+#         from tkinter import messagebox
+#         messagebox.showerror("Erreur", "Generez le planning d'abord!")
+#         return
+    
+#     slots_dict = {slot: data for slot, data in app.slots}
+#     fitness_score = fitness(app.best, app.teachers, slots_dict)
+#     counts = {}
+#     unassigned_teachers = []
+    
+#     # Compter les assignations par enseignant
+#     for slot in app.best:
+#         valid_teachers = [t for t in app.best[slot] if is_valid_teacher(t)]
+#         for e in valid_teachers:
+#             counts[e] = counts.get(e, 0) + 1
+    
+#     # Identifier les enseignants non assignés (participants à la surveillance)
+#     for teacher in app.teachers:
+#         if app.teachers[teacher].get('participe_surveillance', False) and teacher not in counts:
+#             unassigned_teachers.append(teacher)
+    
+#     # Calculer la répartition des surveillances par jour
+#     teacher_days = {}
+#     for teacher in app.teachers:
+#         if not app.teachers[teacher].get('participe_surveillance', False):
+#             continue
+#         teacher_slots = get_teacher_slots(app.best, teacher)
+#         days = set(date.strftime('%Y-%m-%d') for date, _, _ in teacher_slots)
+#         teacher_days[teacher] = len(days)
+    
+#     # Compter les enseignants par nombre de jours
+#     single_day_teachers = sum(1 for days in teacher_days.values() if days == 1)
+#     two_day_teachers = sum(1 for days in teacher_days.values() if days == 2)
+#     three_day_teachers = sum(1 for days in teacher_days.values() if days == 3)
+#     four_day_teachers = sum(1 for days in teacher_days.values() if days == 4)
+#     five_plus_day_teachers = sum(1 for days in teacher_days.values() if days >= 5)
+    
+#     # Compter le nombre total de jours d'examen (dates uniques)
+#     total_exam_days = len(set(slot.split()[0] for slot in app.best))
+    
+#     violations = {
+#         'min_profs': 0, 'max_profs': 0, 'voeux_violes': 0,
+#         'voeux_prioritaires_violes': 0, 'duplicates': 0,
+#         'one_gap': 0, 'two_gaps': 0
+#     }
+    
+#     total_excess, quota_violations_count = calculate_quota_violations(counts, app.teachers)
+    
+#     for slot in app.best:
+#         valid_teachers = [t for t in app.best[slot] if is_valid_teacher(t)]
+#         unique = len(set(valid_teachers))
+#         slot_data = slots_dict.get(slot, {})
+#         room_count = slot_data.get('room_count', 1)
+#         min_needed = 2 * room_count
+#         max_needed = 4 * room_count
+        
+#         if unique < min_needed:
+#             violations['min_profs'] += (min_needed - unique)
+#         if unique > max_needed:
+#             violations['max_profs'] += (unique - max_needed)
+#         if len(valid_teachers) != unique:
+#             violations['duplicates'] += (len(valid_teachers) - unique)
+        
+#         for e in valid_teachers:
+#             if e in app.teachers and slot in app.teachers[e].get('indispo', []):
+#                 violations['voeux_violes'] += 1
+#                 priority = app.teachers[e].get('wish_priority', {}).get(slot, 1.0)
+#                 if priority > 1.5:
+#                     violations['voeux_prioritaires_violes'] += 1
+    
+#     gap_violations = check_gap_violations(app.best, app.teachers, slots_dict)
+#     violations['one_gap'] = gap_violations['one_gap']
+#     violations['two_gaps'] = gap_violations['two_gaps']
+    
+#     prof_resp_results = check_prof_responsable_presence_simple(app)
+#     prof_resp_present = sum(1 for r in prof_resp_results if r['present'])
+#     prof_resp_absent = sum(1 for r in prof_resp_results if not r['present'])
+#     total_repartitions = len(prof_resp_results)
+    
+#     # Calculer les taux de présence et d'absence
+#     if total_repartitions > 0:
+#         taux_presence = (prof_resp_present / total_repartitions) * 100
+#         taux_absence = (prof_resp_absent / total_repartitions) * 100
+#         status_resp = ("Excellent" if taux_presence >= 90 else
+#                       "Acceptable" if taux_presence >= 70 else "Insuffisant")
+#     else:
+#         taux_presence = 0
+#         taux_absence = 0
+#         status_resp = "N/A"
+    
+#     # Calculer l'équité par grade uniquement pour les enseignants participants
+#     grade_stats = {}
+#     for grade in set(t.get('grade', '') for t in app.teachers.values() if t.get('participe_surveillance', False)):
+#         if not grade:
+#             continue
+#         grade_counts = [counts.get(e, 0) for e in app.teachers
+#                        if app.teachers[e].get('grade') == grade and app.teachers[e].get('participe_surveillance', False)]
+#         if grade_counts:
+#             grade_stats[grade] = {
+#                 'min': min(grade_counts),
+#                 'max': max(grade_counts),
+#                 'avg': np.mean(grade_counts),
+#                 'std': np.std(grade_counts)
+#             }
+    
+#     app.tree.delete(*app.tree.get_children())
+#     app.tree["columns"] = ("Metrique", "Valeur", "Statut")
+#     app.tree.heading("Metrique", text="Metrique")
+#     app.tree.heading("Valeur", text="Valeur")
+#     app.tree.heading("Statut", text="Statut")
+#     app.tree.column("Metrique", width=400)
+#     app.tree.column("Valeur", width=150)
+#     app.tree.column("Statut", width=200)
+    
+#     data = []
+#     quality = ("Excellent" if fitness_score > -100 else
+#               "Acceptable" if fitness_score > -500 else "A ameliorer")
+#     data.append(("SCORE GLOBAL", f"{fitness_score:.0f}", quality, "header"))
+#     data.append(("", "", "", ""))
+    
+#     data.append(("=== CONTRAINTES RIGIDES ===", "", "", "header"))
+#     constraints = {
+#         'min_profs': "Minimum 2 profs/salle",
+#         'max_profs': "Maximum 4 profs/salle",
+#         'duplicates': "Doublons"
+#     }
+#     for key, label in constraints.items():
+#         count = violations[key]
+#         status = "OK" if count == 0 else f"{count} violation(s)"
+#         tag = "ok" if count == 0 else "error"
+#         data.append((label, count, status, tag))
+    
+#     data.append(("Depassements de quota", total_excess,
+#                 "OK" if total_excess == 0 else f"{quota_violations_count} enseignant(s)",
+#                 "ok" if total_excess == 0 else "error"))
+#     data.append(("Enseignants non assigne", len(unassigned_teachers),
+#                 "Aucun" if not unassigned_teachers else f"{len(unassigned_teachers)}",
+#                 "ok" if not unassigned_teachers else "warning"))
+    
+#     data.append(("", "", "", ""))
+#     data.append(("=== PRIORITE DES VOEUX ===", "", "", "header"))
+#     voeux_prioritaires = violations['voeux_prioritaires_violes']
+#     voeux_normaux = violations['voeux_violes'] - voeux_prioritaires
+#     data.append(("Voeux prioritaires violes", voeux_prioritaires,
+#                 "Bien respectes" if voeux_prioritaires == 0 else f"{voeux_prioritaires} viole(s)",
+#                 "ok" if voeux_prioritaires == 0 else "warning"))
+#     data.append(("Voeux normaux violes", voeux_normaux,
+#                 "OK" if voeux_normaux == 0 else f"{voeux_normaux} violé(s)",
+#                 "ok" if voeux_normaux == 0 else ""))
+    
+#     data.append(("", "", "", ""))
+#     data.append(("=== CONTINUITE DES SEANCES ===", "", "", "header"))
+#     data.append(("Seances avec 1 creux", violations['one_gap'],
+#                 "Aucune" if violations['one_gap'] == 0 else f"{violations['one_gap']} occurrence(s)",
+#                 "ok" if violations['one_gap'] == 0 else "warning"))
+#     data.append(("Seances avec 2 creux", violations['two_gaps'],
+#                 "Aucune" if violations['two_gaps'] == 0 else f"{violations['two_gaps']} occurrence(s)",
+#                 "ok" if violations['two_gaps'] == 0 else "error"))
+    
+#     data.append(("", "", "", ""))
+#     data.append(("=== REPARTITION DES SURVEILLANCES PAR JOUR ===", "", "", "header"))
+#     data.append(("Total jours d'examen", total_exam_days,
+#                 "", ""))
+#     data.append(("Enseignants non assignes (participants)", len(unassigned_teachers),
+#                 f"{len(unassigned_teachers)} enseignants",
+#                 "ok" if not unassigned_teachers else "warning"))
+#     data.append(("Enseignants sur 1 jour", single_day_teachers,
+#                 f"{single_day_teachers} enseignants",
+#                 "" if single_day_teachers == 0 else "warning"))
+#     data.append(("Enseignants sur 2 jours", two_day_teachers,
+#                 f"{two_day_teachers} enseignants",
+#                 ""))
+#     data.append(("Enseignants sur 3 jours", three_day_teachers,
+#                 f"{three_day_teachers} enseignants",
+#                 ""))
+#     data.append(("Enseignants sur 4 jours", four_day_teachers,
+#                 f"{four_day_teachers} enseignants",
+#                 ""))
+#     data.append(("Enseignants sur 5+ jours", five_plus_day_teachers,
+#                 f"{five_plus_day_teachers} enseignants",
+#                 ""))
+    
+#     data.append(("", "", "", ""))
+#     data.append(("=== PROFS RESPONSABLES ===", "", "", "header"))
+#     if total_repartitions > 0:
+#         data.append(("Total repartitions", total_repartitions, "", ""))
+#         data.append(("Profs responsables presents",
+#                     f"{prof_resp_present}/{total_repartitions}",
+#                     f"{taux_presence:.1f}% presence - {taux_absence:.1f}% absence", 
+#                     "ok" if prof_resp_present > 0 else "warning"))
+#         data.append(("Profs responsables absents", prof_resp_absent,
+#                     "", ""))
+#     else:
+#         data.append(("Repartitions identifiees", 0, "Aucune", "warning"))
+    
+#     data.append(("", "", "", ""))
+#     data.append(("=== EQUITE PAR GRADE ===", "", "", "header"))
+#     for grade in sorted(grade_stats.keys()):
+#         stats = grade_stats[grade]
+#         equity = ("Excellent" if stats['std'] < 1.0 else
+#                  "Acceptable" if stats['std'] < 2.0 else "A ameliorer")
+#         data.append((
+#             f"Grade {grade}",
+#             f"Min:{stats['min']} Max:{stats['max']} Moy:{stats['avg']:.1f}",
+#             f"sigma={stats['std']:.2f} {equity}",
+#             ""
+#         ))
+    
+#     if app.best_fitness_history:
+#         data.append(("", "", "", ""))
+#         data.append(("=== CONVERGENCE ===", "", "", "header"))
+#         total_gen = len(app.best_fitness_history)
+#         improvement = app.best_fitness_history[-1] - app.best_fitness_history[0]
+#         data.append(("Generations utilisees", total_gen,
+#                     "OK" if total_gen < 1000 else "->", ""))
+#         data.append(("Amelioration totale", f"{improvement:+.0f}",
+#                     "Bonne" if improvement > 0 else "->", ""))
+    
+#     app.view_data = data
+#     app.populate_flat_view()
+    
+#     app.tree.tag_configure("header", font=("Arial", 11, "bold"), background="#e0e0e0")
+#     app.tree.tag_configure("ok", background="#ccffcc")
+#     app.tree.tag_configure("warning", background="#fff3cd")
+#     app.tree.tag_configure("error", background="#ffcccc")
+    
+#     app.current_view = "quality"
+#     app.view_type_label.config(text="Vue actuelle: Qualite du Planning")
+#     app.configure_action_buttons()
 def show_planning_quality_with_prof_resp(app):
-    """Affiche qualite + info prof responsable"""
+    """Affiche la qualité du planning avec UI moderne et améliorée"""
     if not app.best:
-        from tkinter import messagebox
-        messagebox.showerror("Erreur", "Generez le planning d'abord!")
+        app.show_error_message("❌ Erreur", "Veuillez générer le planning d'abord!")
         return
     
-    slots_dict = {slot: data for slot, data in app.slots}
-    fitness_score = fitness(app.best, app.teachers, slots_dict)
-    counts = {}
-    unassigned_teachers = []
+    app.tree.delete(*app.tree.get_children())
+    app.tree["columns"] = ("Métrique", "Valeur", "Statut", "Détails")
     
-    # Compter les assignations par enseignant
-    for slot in app.best:
-        valid_teachers = [t for t in app.best[slot] if is_valid_teacher(t)]
-        for e in valid_teachers:
-            counts[e] = counts.get(e, 0) + 1
-    
-    # Identifier les enseignants non assignés (participants à la surveillance)
-    for teacher in app.teachers:
-        if app.teachers[teacher].get('participe_surveillance', False) and teacher not in counts:
-            unassigned_teachers.append(teacher)
-    
-    # Calculer la répartition des surveillances par jour
-    teacher_days = {}
-    for teacher in app.teachers:
-        if not app.teachers[teacher].get('participe_surveillance', False):
-            continue
-        teacher_slots = get_teacher_slots(app.best, teacher)
-        days = set(date.strftime('%Y-%m-%d') for date, _, _ in teacher_slots)
-        teacher_days[teacher] = len(days)
-    
-    # Compter les enseignants par nombre de jours
-    single_day_teachers = sum(1 for days in teacher_days.values() if days == 1)
-    two_day_teachers = sum(1 for days in teacher_days.values() if days == 2)
-    three_day_teachers = sum(1 for days in teacher_days.values() if days == 3)
-    four_day_teachers = sum(1 for days in teacher_days.values() if days == 4)
-    five_plus_day_teachers = sum(1 for days in teacher_days.values() if days >= 5)
-    
-    # Compter le nombre total de jours d'examen (dates uniques)
-    total_exam_days = len(set(slot.split()[0] for slot in app.best))
-    
-    violations = {
-        'min_profs': 0, 'max_profs': 0, 'voeux_violes': 0,
-        'voeux_prioritaires_violes': 0, 'duplicates': 0,
-        'one_gap': 0, 'two_gaps': 0
+    # Configure columns
+    cols = {
+        "Métrique": {"width": 300, "anchor": "w"},
+        "Valeur": {"width": 120, "anchor": "center"},
+        "Statut": {"width": 150, "anchor": "center"},
+        "Détails": {"width": 350, "anchor": "w"}
     }
     
-    total_excess, quota_violations_count = calculate_quota_violations(counts, app.teachers)
+    for col, config in cols.items():
+        app.tree.heading(col, text=col)
+        app.tree.column(col, width=config["width"], anchor=config["anchor"])
     
+    # Calculate metrics
+    counts = defaultdict(int)
     for slot in app.best:
-        valid_teachers = [t for t in app.best[slot] if is_valid_teacher(t)]
-        unique = len(set(valid_teachers))
-        slot_data = slots_dict.get(slot, {})
-        room_count = slot_data.get('room_count', 1)
+        for teacher in app.best[slot]:
+            counts[teacher] += 1
+    
+    # Unassigned teachers
+    assigned_teachers = set(counts.keys())
+    eligible_teachers = {t for t, data in app.teachers.items() 
+                        if data.get('participe_surveillance', False)}
+    unassigned_teachers = eligible_teachers - assigned_teachers
+    
+    # Quota violations
+    total_excess = 0
+    quota_violations_count = 0
+    over_quota_list = []
+    
+    for teacher, count in counts.items():
+        quota = app.teachers[teacher].get('quota', 0)
+        if count > quota:
+            excess = count - quota
+            total_excess += excess
+            quota_violations_count += 1
+            teacher_name = f"{app.teachers[teacher].get('prenom', '')} {app.teachers[teacher].get('nom', '')}"
+            over_quota_list.append(f"{teacher_name} (+{excess})")
+    
+    # Constraint violations
+    violations = {
+        'min_profs': 0,
+        'max_profs': 0,
+        'duplicates': 0,
+        'voeux_violes': 0,
+        'voeux_prioritaires_violes': 0
+    }
+    
+    # Check each slot
+    for slot in app.best:
+        teachers_in_slot = app.best[slot]
+        unique_teachers = len(set(teachers_in_slot))
+        
+        # Get room count for this slot
+        room_count = 1  # Default
+        if hasattr(app, 'room_assignments') and slot in app.room_assignments:
+            room_count = len(app.room_assignments[slot])
+        
         min_needed = 2 * room_count
         max_needed = 4 * room_count
         
-        if unique < min_needed:
-            violations['min_profs'] += (min_needed - unique)
-        if unique > max_needed:
-            violations['max_profs'] += (unique - max_needed)
-        if len(valid_teachers) != unique:
-            violations['duplicates'] += (len(valid_teachers) - unique)
+        if unique_teachers < min_needed:
+            violations['min_profs'] += (min_needed - unique_teachers)
+        if unique_teachers > max_needed:
+            violations['max_profs'] += (unique_teachers - max_needed)
+        if len(teachers_in_slot) != unique_teachers:
+            violations['duplicates'] += (len(teachers_in_slot) - unique_teachers)
         
-        for e in valid_teachers:
-            if e in app.teachers and slot in app.teachers[e].get('indispo', []):
-                violations['voeux_violes'] += 1
-                priority = app.teachers[e].get('wish_priority', {}).get(slot, 1.0)
-                if priority > 1.5:
-                    violations['voeux_prioritaires_violes'] += 1
+        # Check unavailability
+        for teacher in teachers_in_slot:
+            teacher_str = str(teacher)
+            if teacher_str in app.teachers:
+                indispo = app.teachers[teacher_str].get('indispo', [])
+                if slot in indispo:
+                    violations['voeux_violes'] += 1
     
-    gap_violations = check_gap_violations(app.best, app.teachers, slots_dict)
-    violations['one_gap'] = gap_violations['one_gap']
-    violations['two_gaps'] = gap_violations['two_gaps']
+    # Teacher distribution by days
+    teacher_days = defaultdict(set)
+    for slot in app.best:
+        date = slot.split()[0]
+        for teacher in app.best[slot]:
+            teacher_days[teacher].add(date)
     
-    prof_resp_results = check_prof_responsable_presence_simple(app)
-    prof_resp_present = sum(1 for r in prof_resp_results if r['present'])
-    prof_resp_absent = sum(1 for r in prof_resp_results if not r['present'])
-    total_repartitions = len(prof_resp_results)
+    day_distribution = defaultdict(int)
+    for teacher, days in teacher_days.items():
+        day_distribution[len(days)] += 1
     
-    # Calculer les taux de présence et d'absence
-    if total_repartitions > 0:
-        taux_presence = (prof_resp_present / total_repartitions) * 100
-        taux_absence = (prof_resp_absent / total_repartitions) * 100
-        status_resp = ("Excellent" if taux_presence >= 90 else
-                      "Acceptable" if taux_presence >= 70 else "Insuffisant")
-    else:
-        taux_presence = 0
-        taux_absence = 0
-        status_resp = "N/A"
+    # Total exam days
+    total_exam_days = len(set(slot.split()[0] for slot in app.best))
     
-    # Calculer l'équité par grade uniquement pour les enseignants participants
+    # Grade equity
     grade_stats = {}
-    for grade in set(t.get('grade', '') for t in app.teachers.values() if t.get('participe_surveillance', False)):
-        if not grade:
-            continue
+    for grade in set(t.get('grade', '') for t in app.teachers.values() 
+                    if t.get('participe_surveillance', False) and t.get('grade')):
         grade_counts = [counts.get(e, 0) for e in app.teachers
-                       if app.teachers[e].get('grade') == grade and app.teachers[e].get('participe_surveillance', False)]
+                       if app.teachers[e].get('grade') == grade 
+                       and app.teachers[e].get('participe_surveillance', False)]
         if grade_counts:
             grade_stats[grade] = {
                 'min': min(grade_counts),
@@ -519,131 +901,116 @@ def show_planning_quality_with_prof_resp(app):
                 'std': np.std(grade_counts)
             }
     
-    app.tree.delete(*app.tree.get_children())
-    app.tree["columns"] = ("Metrique", "Valeur", "Statut")
-    app.tree.heading("Metrique", text="Metrique")
-    app.tree.heading("Valeur", text="Valeur")
-    app.tree.heading("Statut", text="Statut")
-    app.tree.column("Metrique", width=400)
-    app.tree.column("Valeur", width=150)
-    app.tree.column("Statut", width=200)
+    # Calculate global score (simplified)
+    global_score = 0
+    global_score -= violations['min_profs'] * 100
+    global_score -= violations['max_profs'] * 50
+    global_score -= violations['duplicates'] * 75
+    global_score -= violations['voeux_violes'] * 20
+    global_score -= total_excess * 30
+    global_score -= len(unassigned_teachers) * 40
     
-    data = []
-    quality = ("Excellent" if fitness_score > -100 else
-              "Acceptable" if fitness_score > -500 else "A ameliorer")
-    data.append(("SCORE GLOBAL", f"{fitness_score:.0f}", quality, "header"))
-    data.append(("", "", "", ""))
+    # Build tree data
+    def insert_section(title, tag="header"):
+        """Insert a section header"""
+        parent = app.tree.insert("", "end", values=(title, "", "", ""), 
+                                 tags=(tag,), open=True)
+        return parent
     
-    data.append(("=== CONTRAINTES RIGIDES ===", "", "", "header"))
-    constraints = {
-        'min_profs': "Minimum 2 profs/salle",
-        'max_profs': "Maximum 4 profs/salle",
-        'duplicates': "Doublons"
-    }
-    for key, label in constraints.items():
-        count = violations[key]
-        status = "OK" if count == 0 else f"{count} violation(s)"
-        tag = "ok" if count == 0 else "error"
-        data.append((label, count, status, tag))
+    def insert_metric(parent, metric, value, status, details="", tag=""):
+        """Insert a metric row"""
+        app.tree.insert(parent, "end", values=(metric, value, status, details), 
+                        tags=(tag,))
     
-    data.append(("Depassements de quota", total_excess,
-                "OK" if total_excess == 0 else f"{quota_violations_count} enseignant(s)",
-                "ok" if total_excess == 0 else "error"))
-    data.append(("Enseignants non assigne", len(unassigned_teachers),
-                "Aucun" if not unassigned_teachers else f"{len(unassigned_teachers)}",
-                "ok" if not unassigned_teachers else "warning"))
+    # === SCORE GLOBAL ===
+    quality = "✅ Excellent" if global_score > -100 else "🟡 Acceptable" if global_score > -500 else "⚠️ À améliorer"
+    quality_tag = "optimal" if global_score > -100 else "acceptable" if global_score > -500 else "problem"
     
-    data.append(("", "", "", ""))
-    data.append(("=== PRIORITE DES VOEUX ===", "", "", "header"))
-    voeux_prioritaires = violations['voeux_prioritaires_violes']
-    voeux_normaux = violations['voeux_violes'] - voeux_prioritaires
-    data.append(("Voeux prioritaires violes", voeux_prioritaires,
-                "Bien respectes" if voeux_prioritaires == 0 else f"{voeux_prioritaires} viole(s)",
-                "ok" if voeux_prioritaires == 0 else "warning"))
-    data.append(("Voeux normaux violes", voeux_normaux,
-                "OK" if voeux_normaux == 0 else f"{voeux_normaux} violé(s)",
-                "ok" if voeux_normaux == 0 else ""))
+    parent = insert_section("📊 SCORE GLOBAL")
+    insert_metric(parent, "Score de qualité", f"{global_score:.0f}", quality, "", quality_tag)
     
-    data.append(("", "", "", ""))
-    data.append(("=== CONTINUITE DES SEANCES ===", "", "", "header"))
-    data.append(("Seances avec 1 creux", violations['one_gap'],
-                "Aucune" if violations['one_gap'] == 0 else f"{violations['one_gap']} occurrence(s)",
-                "ok" if violations['one_gap'] == 0 else "warning"))
-    data.append(("Seances avec 2 creux", violations['two_gaps'],
-                "Aucune" if violations['two_gaps'] == 0 else f"{violations['two_gaps']} occurrence(s)",
-                "ok" if violations['two_gaps'] == 0 else "error"))
+    # === CONTRAINTES RIGIDES ===
+    parent = insert_section("🔒 CONTRAINTES RIGIDES")
     
-    data.append(("", "", "", ""))
-    data.append(("=== REPARTITION DES SURVEILLANCES PAR JOUR ===", "", "", "header"))
-    data.append(("Total jours d'examen", total_exam_days,
-                "", ""))
-    data.append(("Enseignants non assignes (participants)", len(unassigned_teachers),
-                f"{len(unassigned_teachers)} enseignants",
-                "ok" if not unassigned_teachers else "warning"))
-    data.append(("Enseignants sur 1 jour", single_day_teachers,
-                f"{single_day_teachers} enseignants",
-                "" if single_day_teachers == 0 else "warning"))
-    data.append(("Enseignants sur 2 jours", two_day_teachers,
-                f"{two_day_teachers} enseignants",
-                ""))
-    data.append(("Enseignants sur 3 jours", three_day_teachers,
-                f"{three_day_teachers} enseignants",
-                ""))
-    data.append(("Enseignants sur 4 jours", four_day_teachers,
-                f"{four_day_teachers} enseignants",
-                ""))
-    data.append(("Enseignants sur 5+ jours", five_plus_day_teachers,
-                f"{five_plus_day_teachers} enseignants",
-                ""))
+    # Min profs
+    status = "✅ OK" if violations['min_profs'] == 0 else f"❌ {violations['min_profs']} violation(s)"
+    tag = "optimal" if violations['min_profs'] == 0 else "problem"
+    insert_metric(parent, "Minimum 2 profs/salle", violations['min_profs'], status, "", tag)
     
-    data.append(("", "", "", ""))
-    data.append(("=== PROFS RESPONSABLES ===", "", "", "header"))
-    if total_repartitions > 0:
-        data.append(("Total repartitions", total_repartitions, "", ""))
-        data.append(("Profs responsables presents",
-                    f"{prof_resp_present}/{total_repartitions}",
-                    f"{taux_presence:.1f}% presence - {taux_absence:.1f}% absence", 
-                    "ok" if prof_resp_present > 0 else "warning"))
-        data.append(("Profs responsables absents", prof_resp_absent,
-                    "", ""))
-    else:
-        data.append(("Repartitions identifiees", 0, "Aucune", "warning"))
+    # Max profs
+    status = "✅ OK" if violations['max_profs'] == 0 else f"⚠️ {violations['max_profs']} violation(s)"
+    tag = "optimal" if violations['max_profs'] == 0 else "problem"
+    insert_metric(parent, "Maximum 4 profs/salle", violations['max_profs'], status, "", tag)
     
-    data.append(("", "", "", ""))
-    data.append(("=== EQUITE PAR GRADE ===", "", "", "header"))
+    # Duplicates
+    status = "✅ OK" if violations['duplicates'] == 0 else f"❌ {violations['duplicates']} doublon(s)"
+    tag = "optimal" if violations['duplicates'] == 0 else "problem"
+    insert_metric(parent, "Doublons", violations['duplicates'], status, "", tag)
+    
+    # Quota violations
+    status = "✅ OK" if total_excess == 0 else f"⚠️ {quota_violations_count} enseignant(s)"
+    tag = "optimal" if total_excess == 0 else "problem"
+    details = ", ".join(over_quota_list[:3]) if over_quota_list else ""
+    if len(over_quota_list) > 3:
+        details += f" ... (+{len(over_quota_list)-3})"
+    insert_metric(parent, "Dépassements de quota", total_excess, status, details, tag)
+    
+    # Unassigned teachers
+    status = "✅ Tous assignés" if not unassigned_teachers else f"⚠️ {len(unassigned_teachers)} non assigné(s)"
+    tag = "optimal" if not unassigned_teachers else "acceptable"
+    insert_metric(parent, "Enseignants non assignés", len(unassigned_teachers), status, "", tag)
+    
+    # === VOEUX ===
+    parent = insert_section("🎯 RESPECT DES VOEUX")
+    
+    status = "✅ Aucune violation" if violations['voeux_violes'] == 0 else f"⚠️ {violations['voeux_violes']} violation(s)"
+    tag = "optimal" if violations['voeux_violes'] == 0 else "acceptable"
+    insert_metric(parent, "Indisponibilités violées", violations['voeux_violes'], status, "", tag)
+    
+    # === DISTRIBUTION PAR JOURS ===
+    parent = insert_section("📅 RÉPARTITION PAR JOURS")
+    
+    insert_metric(parent, "Jours d'examen totaux", total_exam_days, "", "", "")
+    
+    for num_days in sorted(day_distribution.keys()):
+        count = day_distribution[num_days]
+        label = f"Enseignants sur {num_days} jour(s)"
+        tag = "acceptable" if num_days <= 3 else "problem" if num_days >= 5 else ""
+        insert_metric(parent, label, count, f"{count} enseignant(s)", "", tag)
+    
+    # === ÉQUITÉ PAR GRADE ===
+    parent = insert_section("⚖️ ÉQUITÉ PAR GRADE")
+    
     for grade in sorted(grade_stats.keys()):
         stats = grade_stats[grade]
-        equity = ("Excellent" if stats['std'] < 1.0 else
-                 "Acceptable" if stats['std'] < 2.0 else "A ameliorer")
-        data.append((
-            f"Grade {grade}",
-            f"Min:{stats['min']} Max:{stats['max']} Moy:{stats['avg']:.1f}",
-            f"sigma={stats['std']:.2f} {equity}",
-            ""
-        ))
+        equity_status = "✅ Excellent" if stats['std'] < 1.0 else "🟡 Acceptable" if stats['std'] < 2.0 else "⚠️ À améliorer"
+        tag = "optimal" if stats['std'] < 1.0 else "acceptable" if stats['std'] < 2.0 else ""
+        
+        value = f"Min:{stats['min']} Max:{stats['max']}"
+        details = f"Moyenne: {stats['avg']:.1f}, Écart-type: {stats['std']:.2f}"
+        insert_metric(parent, f"Grade {grade}", value, equity_status, details, tag)
     
-    if app.best_fitness_history:
-        data.append(("", "", "", ""))
-        data.append(("=== CONVERGENCE ===", "", "", "header"))
-        total_gen = len(app.best_fitness_history)
-        improvement = app.best_fitness_history[-1] - app.best_fitness_history[0]
-        data.append(("Generations utilisees", total_gen,
-                    "OK" if total_gen < 1000 else "->", ""))
-        data.append(("Amelioration totale", f"{improvement:+.0f}",
-                    "Bonne" if improvement > 0 else "->", ""))
+    # === STATISTIQUES GÉNÉRALES ===
+    parent = insert_section("📈 STATISTIQUES GÉNÉRALES")
     
-    app.view_data = data
-    app.populate_flat_view()
+    total_slots = len(app.best)
+    total_assignments = sum(len(teachers) for teachers in app.best.values())
+    avg_teachers_per_slot = total_assignments / total_slots if total_slots > 0 else 0
     
-    app.tree.tag_configure("header", font=("Arial", 11, "bold"), background="#e0e0e0")
-    app.tree.tag_configure("ok", background="#ccffcc")
-    app.tree.tag_configure("warning", background="#fff3cd")
-    app.tree.tag_configure("error", background="#ffcccc")
+    insert_metric(parent, "Créneaux totaux", total_slots, "", "", "")
+    insert_metric(parent, "Assignations totales", total_assignments, "", "", "")
+    insert_metric(parent, "Moyenne profs/créneau", f"{avg_teachers_per_slot:.1f}", "", "", "")
+    insert_metric(parent, "Enseignants participants", len(eligible_teachers), "", "", "")
+    insert_metric(parent, "Enseignants assignés", len(assigned_teachers), 
+                 f"{len(assigned_teachers)}/{len(eligible_teachers)}", "", "")
     
-    app.current_view = "quality"
-    app.view_type_label.config(text="Vue actuelle: Qualite du Planning")
-    app.configure_action_buttons()
-
+    # Update summary if exists
+    if hasattr(app, 'summary_label'):
+        summary_text = f"📊 Score: {global_score:.0f} | "
+        summary_text += f"❌ {violations['min_profs'] + violations['max_profs']} violations | "
+        summary_text += f"⚠️ {len(unassigned_teachers)} non assignés | "
+        summary_text += f"✅ {len(assigned_teachers)}/{len(eligible_teachers)} enseignants"
+        app.summary_label.configure(text=summary_text)
 
 
 
