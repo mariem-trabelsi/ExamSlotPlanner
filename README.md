@@ -1,12 +1,17 @@
 # 🧬 Algorithme Génétique - Optimisation du Planning de Surveillance
 
-## 📋 Vue d'ensemble
+## 🧚‍♀️ Vue d'ensemble
 
 Implémentant un **algorithme génétique pour optimiser un planning de surveillance** en assignant des enseignants à des créneaux horaires. L'algorithme cherche à respecter les contraintes tout en maximisant l'équité et la qualité globale du planning.
 
 ---
+## 🧚‍♀️ Organizations des fichiers
 
-## 🔧 Méthodes principales
+<img width="557" height="356" alt="image" src="https://github.com/user-attachments/assets/51f915b7-f9f1-4fa0-8029-02d3a7e54789" />
+
+
+    
+## 🧚‍♀️ Méthodes principales
 
 ### 1. **`fitness(assignment, teachers, slots_dict)`** — Évaluation de la qualité
 
@@ -40,11 +45,11 @@ Fonction centrale qui attribue un **score** à chaque solution. Plus le score es
 
 #### **Dispersion des créneaux**
 - Les créneaux de chaque professeur doivent être bien répartis sur plusieurs jours
-- **Pénalité** si > 3 jours
+- **Pénalité** si > 2 jours
 - **Bonus** si répartition uniforme avec gaps consécutifs
 
 #### **Équité par grade**
-- La variance des charges entre professeurs du même grade est **pénalisée** : -50 × variance
+- La variance des charges entre professeurs du même grade est **pénalisée** : -200 × variance
 - Assure une distribution équitable entre les niveaux d'enseignement
 
 ---
@@ -134,7 +139,7 @@ Parse les créneaux au format 'YYYY-MM-DD SESSION' (ex: '2025-05-13 S2')
 
 ---
 
-## 🎯 Critères d'arrêt
+## 🧚‍♀️ Critères d'arrêt
 
 L'algorithme s'arrête selon trois critères implémentés dans **`run_ga_optimized()`** :
 
@@ -169,7 +174,7 @@ max_generations = 3000
 
 ---
 
-## 🧬 Dynamique de mutation
+## 🧚‍♀️ Dynamique de mutation
 
 La **mutation rate** s'adapte automatiquement selon le niveau de stagnation pour équilibrer **exploration** et **exploitation** :
 
@@ -209,7 +214,7 @@ if improvement >= MIN_IMPROVEMENT:
 
 ---
 
-## 📊 Flux d'exécution par génération
+## 🧚‍♀️  Flux d'exécution par génération
 
 ```
 GÉNÉRATION n
@@ -247,7 +252,7 @@ GÉNÉRATION n
 
 ---
 
-## 🎲 Exemple concret
+## 🧚‍♀️ Exemple concret
 
 **Scénario : Professeur "Alice" surchargé à la génération 5**
 
@@ -279,7 +284,7 @@ GÉNÉRATION n
 
 ---
 
-## 🚀 Paramètres clés
+## 🧚‍♀️ Paramètres clés
 
 | Paramètre | Valeur | Description |
 |-----------|--------|-------------|
@@ -293,7 +298,7 @@ GÉNÉRATION n
 
 ---
 
-## 💡 Stratégie d'optimisation
+## 🧚‍♀️  Stratégie d'optimisation
 
 1. **Initialisation** : création aléatoire avec biais vers professeurs responsables
 2. **Évaluation** : score multi-critères équilibrant respect de contraintes et équité
@@ -304,3 +309,46 @@ GÉNÉRATION n
 7. **Arrêt** : trois critères pour optimiser temps vs qualité
 
 **Résultat** : un planning viable, équitable et respectant les contraintes majeure
+
+---
+## 🧚‍♀️ Installation & exécution du projet
+Suivez ces étapes pour cloner et exécuter l'application :
+
+1. **Cloner le projet** :
+   ```bash
+   git clone https://github.com/mariem-trabelsi/ExamSlotPlanner.git
+   cd ExamSlotPlanner
+   ```
+2. **Supprimer l'environnement virtuel existant :** :
+   ```bash
+   rm -rf env_surveillance
+   ```
+
+3. **Créer un environnement virtuel** :
+   ```bash
+   python3.11 -m venv venv
+   ```
+4. **Activer l'environnement virtuel** :
+   Sur windows:
+   ```bash
+    venv\Scripts\activate
+   ```
+
+    Sur Linux/Mac ::
+   ```bash
+    source venv/bin/activate
+   ```
+5. **Installer les dépendances** :
+ ```bash
+   pip install -r requirements.txt
+```
+6. **Exécuter l'application** :
+   ```bash
+   python main.py
+   ```
+## Prérequis
+Assurez-vous d'avoir Python (**version 3.11**) installé. Vérifiez avec :
+```bash
+  python --version
+```
+   
