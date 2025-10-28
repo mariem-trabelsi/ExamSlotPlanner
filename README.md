@@ -368,6 +368,7 @@ Avec option de chnager le mot de passe
 
 <img width="720" height="391" alt="image" src="https://github.com/user-attachments/assets/323184e6-ae7f-4164-ba7a-103f7b843daf" />
 
+## Remarque sur le critère équité par grade: la modification manuelle du planning permet de résoudre le problème au cas ou un enseignant a un nombre de surveillances inférieur au quota (généralment une 1 seule séance manquante par rapport au quota): assigner manullement cet enseignant à un nouvel créneau.  
 
 <img width="1434" height="783" alt="image" src="https://github.com/user-attachments/assets/946fa7f4-5aa3-458f-8741-3213537ed4a8" />
 
