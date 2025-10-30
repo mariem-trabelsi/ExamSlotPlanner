@@ -391,7 +391,7 @@ Avec option de chnager le mot de passe
 ## Séléction la ligne à modifier
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/a967c899-3d92-4386-9b7d-35aa2825dd88" />
 
-## Option de transfert ou de supression
+## Option de transfert ou de supression des créneaux 
 <img width="989" height="775" alt="image" src="https://github.com/user-attachments/assets/e0e6a813-b53e-4bd6-8c6b-ae5a416521be" />
 
 
