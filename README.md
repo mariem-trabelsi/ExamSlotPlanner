@@ -368,7 +368,6 @@ Avec option de chnager le mot de passe
 
 <img width="720" height="391" alt="image" src="https://github.com/user-attachments/assets/323184e6-ae7f-4164-ba7a-103f7b843daf" />
 
-## Remarque sur le critère équité par grade: la modification manuelle du planning permet de résoudre le problème au cas ou un enseignant a un nombre de surveillances inférieur au quota (généralment une 1 seule séance manquante par rapport au quota): assigner manullement cet enseignant à un nouvel créneau.  
 
 <img width="1434" height="783" alt="image" src="https://github.com/user-attachments/assets/946fa7f4-5aa3-458f-8741-3213537ed4a8" />
 
@@ -379,8 +378,21 @@ Avec option de chnager le mot de passe
 ## Barre  de recherche pour le filtrage 
 <img width="640" height="366" alt="image" src="https://github.com/user-attachments/assets/402af4bc-a98f-4eba-a736-8c0bbbf5d0b8" />
 
+## Historiques des plannings
+
+<img width="1906" height="1019" alt="image" src="https://github.com/user-attachments/assets/ed7903b0-77b1-4802-86c1-a72822532312" />
+
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/d04e19d5-4e96-4a40-9383-18224daa3b0c" />
 
 
+
+## Remarque sur le critère équité par grade: la reconfiguration manuelle du planning permet de résoudre le problème au cas ou un enseignant a un nombre de surveillances inférieur au quota (généralment une 1 seule séance manquante par rapport au quota).
+
+## Séléction la ligne à modifier
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/a967c899-3d92-4386-9b7d-35aa2825dd88" />
+
+## Option de transfert ou de supression
+<img width="989" height="775" alt="image" src="https://github.com/user-attachments/assets/e0e6a813-b53e-4bd6-8c6b-ae5a416521be" />
 
 
 
