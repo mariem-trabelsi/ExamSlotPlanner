@@ -378,6 +378,8 @@ Avec option de chnager le mot de passe
 ## Barre  de recherche pour le filtrage 
 <img width="640" height="366" alt="image" src="https://github.com/user-attachments/assets/402af4bc-a98f-4eba-a736-8c0bbbf5d0b8" />
 
+## Sélection d'une ligne (vue enseignat et vue salle) permet de détailler les informations relatives
+
 ## Historiques des plannings
 
 <img width="1906" height="1019" alt="image" src="https://github.com/user-attachments/assets/ed7903b0-77b1-4802-86c1-a72822532312" />
