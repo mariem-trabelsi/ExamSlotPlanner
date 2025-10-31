@@ -349,7 +349,7 @@ Suivez ces étapes pour cloner et exécuter l'application :
 ## Login
 
 **usename** : admin
-**password** admin12
+**password** : admin123
 
 Avec option de chnager le mot de passe
 
