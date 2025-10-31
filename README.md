@@ -378,7 +378,19 @@ Avec option de chnager le mot de passe
 ## Barre  de recherche pour le filtrage 
 <img width="640" height="366" alt="image" src="https://github.com/user-attachments/assets/402af4bc-a98f-4eba-a736-8c0bbbf5d0b8" />
 
-## Sélection d'une ligne (vue enseignat et vue salle) permet de détailler les informations relatives
+## Sélection d'une ligne dans la vue salle permet de détailler les informations relatives
+
+<img width="1436" height="776" alt="image" src="https://github.com/user-attachments/assets/9277bf60-97ad-47aa-9c63-bd116afaee53" />
+
+<img width="1457" height="815" alt="image" src="https://github.com/user-attachments/assets/ac241015-4d47-4e4a-bb6f-04eebb95fe6b" />
+
+## Sélection d'une ligne dans la vue enseigant permet de détailler les informations relatives
+
+<img width="1466" height="835" alt="image" src="https://github.com/user-attachments/assets/720525b5-24d9-460f-b449-f47ba6381a93" />
+
+<img width="1458" height="800" alt="image" src="https://github.com/user-attachments/assets/233e7899-b2ab-459c-94aa-71a61bfc4480" />
+
+
 
 ## Historiques des plannings
 
